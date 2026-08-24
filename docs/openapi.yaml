@@ -1,0 +1,3616 @@
+openapi: 3.1.0
+info:
+  title: PairEval API (Campus Pairwise Evaluation Service)
+  description: >
+    RESTful API specification for **PairEval**, a campus pairwise peer and group evaluation platform.
+    Designed according to PRD specifications, Architectural Principles (AR-01..06), Database Rules (DR-01..10),
+    and all 31 User Stories (US-AUTH-01..04, US-CLASS-01..03, US-ASSIGN-01..03, US-PAIR-01..04, US-EVAL-01..05,
+    US-SCORE-01..04, US-REPORT-01..03, US-EXPORT-01, US-INTEG-01, US-NOTIF-01, US-AUDIT-01, US-APPEAL-01).
+  version: 1.0.0
+  contact:
+    name: PairEval Core Engineering Team
+    email: support@paireval.university.ac.th
+  license:
+    name: Proprietary / University Internal
+
+servers:
+  - url: https://api.paireval.university.ac.th
+    description: Production API Server
+  - url: http://localhost:8000
+    description: Local Development API Server
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Authentication & Identity
+    description: Google OAuth 2.0 authentication, session management, and identity verification.
+  - name: Classrooms & Roster
+    description: Classroom lifecycle, members, and atomic CSV roster import/upsert.
+  - name: Assignments & Criteria
+    description: Assignment configuration, 100% criteria weight validation, and state machine transitions.
+  - name: Pairing Engine
+    description: Pairing feasibility computation, auto-reduction, and extra evaluator assignment.
+  - name: Evaluation Workflow
+    description: 6-point forced choice comparisons, autosave drafts, and idempotent submission workflows.
+  - name: Scoring & Reports
+    description: Pure function score computations, k-anonymity score views, and instructor analytics.
+  - name: Data Export
+    description: Export reports to UTF-8 BOM CSV and XLSX with pseudonymization guards.
+  - name: Quality Signals & Integrity
+    description: Evaluation anomaly detection (QS-01..07) and comparison exclusion.
+  - name: Audit & Appeals
+    description: Append-only audit trail logging and student score dispute intake/resolution.
+  - name: Notifications
+    description: Milestone email reminders and in-app notifications without grade exposures.
+
+paths:
+  # ==========================================
+  # 1. Authentication & Identity
+  # ==========================================
+  /api/auth/google:
+    post:
+      tags:
+        - Authentication & Identity
+      summary: Authenticate via Google OAuth 2.0 / OIDC
+      description: >
+        Authenticates user with a Google OAuth 2.0 ID token. Enforces university hosted domain
+        restriction (US-AUTH-02), normalizes user email (removing plus tags and gmail dots)
+        to match existing roster entries, automatically activates PENDING accounts (US-AUTH-03),
+        and creates a 12-hour bearer token session (US-AUTH-01).
+      operationId: authenticateGoogle
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleAuthRequest'
+      responses:
+        '200':
+          description: User authenticated successfully with a 12-hour session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: Email domain not allowed under classroom restrictions (FR-AUTH-02) or account disabled.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+
+  /api/auth/me:
+    get:
+      tags:
+        - Authentication & Identity
+      summary: Get Current Authenticated User Profile & Scopes
+      description: >
+        Returns the profile of the currently authenticated user, including active classroom
+        memberships and assigned roles (US-AUTH-01, US-AUTH-04).
+      operationId: getCurrentUser
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Current user profile details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  # ==========================================
+  # 2. Classrooms & Roster Management
+  # ==========================================
+  /api/classrooms:
+    get:
+      tags:
+        - Classrooms & Roster
+      summary: List Classrooms for Current User
+      description: >
+        Lists all classrooms in which the authenticated user is enrolled as an Owner,
+        Co-Teacher, TA, or Student (US-CLASS-01, US-AUTH-04).
+      operationId: listClassrooms
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [ACTIVE, ARCHIVED, ALL]
+            default: ACTIVE
+          description: Filter by classroom operational status.
+      responses:
+        '200':
+          description: List of classrooms.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ClassroomSummary'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    post:
+      tags:
+        - Classrooms & Roster
+      summary: Create a New Classroom
+      description: >
+        Creates a new classroom with a unique URL slug, timezone, and allowed email domains.
+        The authenticated user is automatically assigned as the classroom Owner (US-CLASS-01).
+      operationId: createClassroom
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClassroomRequest'
+      responses:
+        '201':
+          description: Classroom successfully created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassroomDetail'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          description: Classroom slug already exists in the system.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+
+  /api/classrooms/{classroomId}:
+    get:
+      tags:
+        - Classrooms & Roster
+      summary: Get Classroom Details
+      description: >
+        Retrieves detailed information for a specific classroom. Enforces classroom resource
+        isolation (FR-AUTHZ-02 / US-AUTH-04), returning 404 if the user is not a member of this classroom.
+      operationId: getClassroom
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ClassroomIdParam'
+      responses:
+        '200':
+          description: Classroom details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassroomDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    patch:
+      tags:
+        - Classrooms & Roster
+      summary: Update or Archive Classroom
+      description: >
+        Updates classroom settings or changes status to ARCHIVED (read-only mode).
+        Requires Owner or Co-Teacher role (US-CLASS-01).
+      operationId: updateClassroom
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ClassroomIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateClassroomRequest'
+      responses:
+        '200':
+          description: Classroom successfully updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassroomDetail'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+
+  /api/classrooms/{classroomId}/roster:
+    get:
+      tags:
+        - Classrooms & Roster
+      summary: Get Classroom Roster and Group Allocations
+      description: >
+        Retrieves the enrolled student roster, groups, and staff members (US-CLASS-02, US-CLASS-03).
+      operationId: getClassroomRoster
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ClassroomIdParam'
+      responses:
+        '200':
+          description: Classroom roster and group assignments.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassroomRosterResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/classrooms/{classroomId}/roster:import:
+    post:
+      tags:
+        - Classrooms & Roster
+      summary: Atomic CSV Roster Import and Upsert
+      description: >
+        Imports or updates student roster and group allocations from a CSV file (`email`, `group_name`,
+        `student_id`, `display_name`). Enforces atomic validation: fails the entire file if any row has an
+        invalid email or formula injection character (`=`, `+`, `-`, `@`) (FR-SEC-04, US-CLASS-02).
+        Supports `mode=upsert` with `dry_run=true` to preview diffs before committing (US-CLASS-03).
+      operationId: importRosterCsv
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ClassroomIdParam'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: CSV file containing roster data (UTF-8 encoded).
+                mode:
+                  type: string
+                  enum: [REPLACE, UPSERT]
+                  default: UPSERT
+                  description: REPLACE resets existing roster; UPSERT updates student groups.
+                dry_run:
+                  type: boolean
+                  default: false
+                  description: If true, returns diff preview without saving changes.
+      responses:
+        '200':
+          description: Dry run diff preview successfully generated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RosterImportResult'
+        '201':
+          description: Roster CSV parsed and imported successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RosterImportResult'
+        '400':
+          description: CSV parsing or row validation error (includes specific row number and reason).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          description: Validation error such as group size < 2 or formula injection detected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/classrooms/{classroomId}/members:
+    post:
+      tags:
+        - Classrooms & Roster
+      summary: Add Co-Teacher or TA to Classroom
+      description: >
+        Adds a Co-Teacher or TA to the classroom by normalized university email (US-CLASS-03).
+      operationId: addClassroomMember
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ClassroomIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddMemberRequest'
+      responses:
+        '201':
+          description: Classroom member successfully added.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassroomMember'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: User is already a member of this classroom.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+
+  /api/classrooms/{classroomId}/members/{memberId}:
+    delete:
+      tags:
+        - Classrooms & Roster
+      summary: Remove Member from Classroom
+      description: >
+        Removes a Co-teacher, TA, or Student from the classroom. Enforces safety invariant:
+        the last remaining Owner cannot be removed (US-CLASS-03, FR-CLASS-06).
+      operationId: removeClassroomMember
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ClassroomIdParam'
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Unique identifier of the classroom member record.
+      responses:
+        '204':
+          description: Member successfully removed.
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: Cannot remove the last remaining Owner from the classroom.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ==========================================
+  # 3. Assignments & Criteria Setup
+  # ==========================================
+  /api/classrooms/{classroomId}/assignments:
+    get:
+      tags:
+        - Assignments & Criteria
+      summary: List Assignments in Classroom
+      description: >
+        Lists all assignments belonging to the specified classroom (US-ASSIGN-01, US-AUTH-04).
+      operationId: listAssignments
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ClassroomIdParam'
+      responses:
+        '200':
+          description: List of assignments.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssignmentSummary'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    post:
+      tags:
+        - Assignments & Criteria
+      summary: Create an Assignment
+      description: >
+        Creates a new assignment in `DRAFT` status with deadlines in UTC, max score weights,
+        artifact links, and criteria definitions. If `individual_max_score = 0`, individual
+        peer evaluation is omitted (US-ASSIGN-01, US-ASSIGN-02).
+      operationId: createAssignment
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ClassroomIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAssignmentRequest'
+      responses:
+        '201':
+          description: Assignment successfully created in DRAFT status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentDetail'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '422':
+          description: Criteria weight sum does not equal 100% or invalid deadline ranges.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/assignments/{assignmentId}:
+    get:
+      tags:
+        - Assignments & Criteria
+      summary: Get Assignment Details
+      description: >
+        Retrieves full assignment configuration, criteria, scoring bounds, deadlines, and state (US-ASSIGN-01, US-ASSIGN-03).
+      operationId: getAssignment
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssignmentIdParam'
+      responses:
+        '200':
+          description: Assignment details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    patch:
+      tags:
+        - Assignments & Criteria
+      summary: Update Assignment Configuration
+      description: >
+        Updates assignment metadata, deadlines, or criteria. Criteria and roster modifications are
+        only allowed in `DRAFT` status (US-ASSIGN-03). In `OPEN` status, only deadline extensions are allowed.
+      operationId: updateAssignment
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssignmentIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAssignmentRequest'
+      responses:
+        '200':
+          description: Assignment updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentDetail'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: Cannot modify criteria or parameters when assignment is not in DRAFT status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+
+  /api/assignments/{assignmentId}/feasibility:
+    get:
+      tags:
+        - Pairing Engine
+      summary: Compute Pairing Feasibility & Auto-Reduction Explanation
+      description: >
+        Evaluates mathematical feasibility between target coverage ($R$) and student workload ($k$).
+        Automatically calculates reduced coverage and provides numeric explanations if targets exceed
+        mathematical limits (US-PAIR-01, §8.2).
+      operationId: getPairingFeasibility
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssignmentIdParam'
+      responses:
+        '200':
+          description: Pairing feasibility computation report.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeasibilityReportResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/assignments/{assignmentId}:publish:
+    post:
+      tags:
+        - Assignments & Criteria
+      summary: Publish Assignment and Generate Balanced Pairs
+      description: >
+        Validates criteria weight sums (100.00% per side), generates deterministic balanced pairs
+        fulfilling invariants INV-1..5 (balanced coverage, balanced workload, no self/group pairs,
+        randomized left/right positions), transitions assignment state to `PUBLISHED` / `OPEN`,
+        and queues milestone notifications (US-ASSIGN-02, US-ASSIGN-03, US-PAIR-02, US-PAIR-03, US-NOTIF-01).
+      operationId: publishAssignment
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssignmentIdParam'
+      responses:
+        '200':
+          description: Assignment published and pairs successfully generated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentDetail'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: Assignment is not in DRAFT state or has invalid roster allocations.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Criteria weights do not sum to 100% or insufficient students for pairing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/assignments/{assignmentId}:unpublish:
+    post:
+      tags:
+        - Assignments & Criteria
+      summary: Unpublish Assignment to Draft State
+      description: >
+        Reverts an assignment from `PUBLISHED` or `OPEN` back to `DRAFT`. Inactivates generated
+        pairs, requires a mandatory justification reason, and logs an immutable audit event (US-ASSIGN-03, US-AUDIT-01).
+      operationId: unpublishAssignment
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssignmentIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonedActionRequest'
+      responses:
+        '200':
+          description: Assignment reverted to DRAFT status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentDetail'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+
+  /api/assignments/{assignmentId}:finalize:
+    post:
+      tags:
+        - Scoring & Reports
+      summary: Finalize Assignment Scores and Freeze Snapshot
+      description: >
+        Computes final Quality Index ($q$), band mapped scores, and participation multipliers ($M$).
+        Generates an immutable snapshot of all scoring inputs/outputs (AR-01, FR-SCORE-09). Flags
+        any items with comparison count < min_comparisons as `LOW_CONFIDENCE`. Transitions status
+        to `FINALIZED` and triggers student email notifications (US-SCORE-03, US-ASSIGN-03, US-NOTIF-01, US-AUDIT-01).
+      operationId: finalizeAssignment
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssignmentIdParam'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinalizeAssignmentRequest'
+      responses:
+        '200':
+          description: Assignment finalized and score snapshot created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentDetail'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: Unresolved LOW_CONFIDENCE items exist or assignment is not in CLOSED state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+
+  /api/assignments/{assignmentId}:reopen:
+    post:
+      tags:
+        - Assignments & Criteria
+      summary: Reopen Finalized Assignment
+      description: >
+        Reopens a `FINALIZED` assignment back to `CLOSED` state for revisions or dispute resolutions.
+        Requires a mandatory justification reason and creates an immutable audit log entry (US-ASSIGN-03, US-AUDIT-01).
+      operationId: reopenAssignment
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssignmentIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonedActionRequest'
+      responses:
+        '200':
+          description: Assignment successfully reopened to CLOSED status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentDetail'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+
+  /api/assignments/{assignmentId}:recompute:
+    post:
+      tags:
+        - Scoring & Reports
+      summary: Recompute Interim Scores On-Demand
+      description: >
+        Executes a pure function recomputation of Quality Index ($q$), band mapping, and participation
+        multipliers for all submitted comparisons without mutating finalized snapshots (US-SCORE-01, US-SCORE-02).
+      operationId: recomputeScores
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssignmentIdParam'
+      responses:
+        '200':
+          description: Scores successfully recomputed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScoreRecomputeResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+  # ==========================================
+  # 4. Pairing Engine & Extra Evaluators
+  # ==========================================
+  /api/assignments/{assignmentId}/pairs:add-evaluators:
+    post:
+      tags:
+        - Pairing Engine
+      summary: Assign Additional Evaluators or Instructor Self-Evaluation
+      description: >
+        Assigns additional peer evaluators to low-coverage pairs or enables the instructor to directly
+        evaluate the pair using the configured Instructor Weight multiplier (US-PAIR-04, US-REPORT-02, US-NOTIF-01).
+      operationId: addExtraEvaluators
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssignmentIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddEvaluatorsRequest'
+      responses:
+        '201':
+          description: Additional evaluators or instructor evaluation scheduled successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddEvaluatorsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+
+  # ==========================================
+  # 5. Evaluation Workflow & Submissions
+  # ==========================================
+  /api/assignments/{assignmentId}/my-evaluations:
+    get:
+      tags:
+        - Evaluation Workflow
+      summary: Get Assigned Evaluation Pairs for Current Student
+      description: >
+        Returns the assigned evaluation pairs for the student, filtered by evaluation side (`GROUP` or `INDIVIDUAL`).
+        Includes artifact links, criteria descriptions, randomized left-right display assignments, draft choices,
+        and deadline status (US-EVAL-01, US-EVAL-02, US-EVAL-04, US-PAIR-02, US-PAIR-03).
+      operationId: getMyEvaluations
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssignmentIdParam'
+        - name: side
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [GROUP, INDIVIDUAL]
+          description: Evaluation side filter (GROUP or INDIVIDUAL).
+      responses:
+        '200':
+          description: Assigned pairwise comparisons for the student.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MyEvaluationsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/comparisons/{pairAssignmentId}:
+    put:
+      tags:
+        - Evaluation Workflow
+      summary: Autosave Draft Comparison Choice (Idempotent)
+      description: >
+        Autosaves a single pairwise comparison draft selection (1..6) with task duration (ms).
+        Guaranteed to be idempotent (calling multiple times with same body yields identical result)
+        (FR-API-01, FR-EVAL-04, US-EVAL-02, US-EVAL-05, US-INTEG-01).
+      operationId: autosaveComparison
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: pairAssignmentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Unique identifier of the assigned pair comparison item.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutosaveComparisonRequest'
+      responses:
+        '200':
+          description: Draft comparison choice saved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComparisonDraftResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: Evaluation deadline has passed; comparisons are locked as read-only.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Choice value is not within the valid 6-point forced scale range [1..6].
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/assignments/{assignmentId}/submissions:
+    post:
+      tags:
+        - Evaluation Workflow
+      summary: Submit or Re-submit Side Evaluations
+      description: >
+        Submits all comparisons for an evaluation side (`GROUP` or `INDIVIDUAL`). Accepts partial
+        submissions with a summary of unanswered items. Allows re-submission before deadline
+        (creates a new revision entry in `comparison_revision`). Supports `Idempotency-Key` header
+        to prevent accidental duplicate submissions (FR-API-02, US-EVAL-03, US-EVAL-05, US-SCORE-02).
+      operationId: submitEvaluations
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssignmentIdParam'
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Client-generated unique UUID to ensure idempotent submission handling.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitEvaluationsRequest'
+      responses:
+        '201':
+          description: Evaluation submission recorded and revision saved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmissionReceiptResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: Deadline has passed or assignment is not open for submission.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+
+  /api/comparisons/{comparisonId}:exclude:
+    post:
+      tags:
+        - Quality Signals & Integrity
+      summary: Mark Comparison as Excluded (Instructor)
+      description: >
+        Marks a specific comparison as `EXCLUDED` due to bad faith, collusion, or anomaly.
+        Requires a mandatory justification reason and triggers automatic score recalculation (US-INTEG-01, US-AUDIT-01, FR-QS-02).
+      operationId: excludeComparison
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: comparisonId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Unique identifier of the comparison to exclude.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExcludeComparisonRequest'
+      responses:
+        '200':
+          description: Comparison excluded status updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComparisonDetail'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+
+  # ==========================================
+  # 6. Scoring & Reports
+  # ==========================================
+  /api/assignments/{assignmentId}/my-score:
+    get:
+      tags:
+        - Scoring & Reports
+      summary: Get Student Personal Score View with k-Anonymity Guard
+      description: >
+        Returns the requesting student's personal scores (group score, individual score, participation
+        ratio $p$, and multiplier $M$). Strictly enforces k-anonymity ($k_{min} \ge 3$): individual
+        score is hidden with "insufficient evaluations" message if comparison count is below 3.
+        Daily score difference deltas are never exposed (US-REPORT-03, FR-ANON-01..04).
+      operationId: getMyScore
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssignmentIdParam'
+      responses:
+        '200':
+          description: Personal score breakdown under privacy protection rules.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentScoreResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/assignments/{assignmentId}/reports/group:
+    get:
+      tags:
+        - Scoring & Reports
+      summary: Instructor Group Summary Report
+      description: >
+        Returns the matrix of Group x Criterion x Quality Index ($q$), comparison counts,
+        weighted scores, and confidence flags for instructors (US-REPORT-01, FR-REPORT-01).
+      operationId: getGroupSummaryReport
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssignmentIdParam'
+      responses:
+        '200':
+          description: Group score breakdown and summary table.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupSummaryReportResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/assignments/{assignmentId}/reports/individual:
+    get:
+      tags:
+        - Scoring & Reports
+      summary: Instructor Individual Summary Report
+      description: >
+        Returns the individual student score summary, Quality Index ($q$), participation ratio ($p$),
+        participation multiplier ($M$), final net score, and score distribution histogram (US-REPORT-01, FR-REPORT-02).
+      operationId: getIndividualSummaryReport
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssignmentIdParam'
+      responses:
+        '200':
+          description: Individual student scores and distribution metrics.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndividualSummaryReportResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/assignments/{assignmentId}/reports/coverage:
+    get:
+      tags:
+        - Scoring & Reports
+      summary: Pair Coverage Matrix Report
+      description: >
+        Provides pair-level comparison counts, average outcomes, and identifies low-coverage pairs
+        requiring instructor intervention or extra evaluators (US-REPORT-02, US-PAIR-04).
+      operationId: getPairCoverageReport
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssignmentIdParam'
+      responses:
+        '200':
+          description: Pair coverage report details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PairCoverageReportResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/assignments/{assignmentId}/reports/quality:
+    get:
+      tags:
+        - Quality Signals & Integrity
+      summary: Quality Signals & Anomaly Detection Report
+      description: >
+        Summarizes evaluation anomalies and bias indicators (QS-01..07): straight-lining, position bias,
+        intransitivity 3-cycles, speed running, favoritism, and inter-rater agreement concordance (US-REPORT-02, US-INTEG-01).
+      operationId: getQualitySignalsReport
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssignmentIdParam'
+      responses:
+        '200':
+          description: Quality signals and bias metrics summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QualitySignalsReportResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/assignments/{assignmentId}/scores:override:
+    post:
+      tags:
+        - Scoring & Reports
+      summary: Manual Instructor Score Override
+      description: >
+        Manually overrides a computed group or individual score. Requires Owner/Instructor role
+        and a mandatory justification reason. Records actor and state diff into the append-only
+        audit log (US-SCORE-04, US-AUDIT-01, DR-03).
+      operationId: overrideScore
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssignmentIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScoreOverrideRequest'
+      responses:
+        '201':
+          description: Score override recorded successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScoreOverrideRecord'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '422':
+          description: Missing mandatory justification reason or score out of valid bounds.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ==========================================
+  # 7. Data Export
+  # ==========================================
+  /api/assignments/{assignmentId}/exports:
+    post:
+      tags:
+        - Data Export
+      summary: Export Evaluation Reports to CSV (UTF-8 BOM) or XLSX
+      description: >
+        Exports score reports to CSV with UTF-8 BOM (`\xef\xbb\xbf`) for Microsoft Excel Thai compatibility
+        or multi-sheet XLSX. Evaluators are pseudonymized by default (US-EXPORT-01). Exporting true evaluator
+        identities (`include_identities=true`) requires Owner role and generates an immutable Audit Log entry (US-AUDIT-01).
+      operationId: exportAssignmentData
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssignmentIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportRequest'
+      responses:
+        '200':
+          description: Binary file stream of the exported report.
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+                example: 'attachment; filename="cs101_project-1_individual_20260824-1800.csv"'
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '202':
+          description: Asynchronous export task queued for large classrooms (FR-API-05).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AsyncExportJobResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: Only Owner can export identifiable records with true evaluator identities.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '429':
+          $ref: '#/components/responses/TooManyRequestsError'
+
+  # ==========================================
+  # 8. Appeals & Audit Trail
+  # ==========================================
+  /api/appeals:
+    post:
+      tags:
+        - Audit & Appeals
+      summary: Submit Student Score Dispute Appeal
+      description: >
+        Allows a student to submit a score dispute appeal within 7 calendar days after assignment finalization (US-APPEAL-01, FR-APPEAL-01).
+      operationId: createAppeal
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAppealRequest'
+      responses:
+        '201':
+          description: Score dispute appeal submitted successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppealDetail'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          description: Appeal submitted after the 7-day post-finalization appeal window has expired.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+
+  /api/assignments/{assignmentId}/appeals:
+    get:
+      tags:
+        - Audit & Appeals
+      summary: List Score Appeals for Assignment
+      description: >
+        Lists all student score appeals filed for this assignment for instructor review (US-APPEAL-01).
+      operationId: listAssignmentAppeals
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssignmentIdParam'
+      responses:
+        '200':
+          description: List of submitted appeals.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AppealDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /api/appeals/{appealId}:
+    patch:
+      tags:
+        - Audit & Appeals
+      summary: Resolve or Reject Score Appeal
+      description: >
+        Instructor reviews and resolves an appeal with justification notes and optional score override.
+        Logs action to the append-only audit trail (US-APPEAL-01, US-SCORE-04, US-AUDIT-01).
+      operationId: resolveAppeal
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: appealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Unique identifier of the appeal.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveAppealRequest'
+      responses:
+        '200':
+          description: Appeal resolution saved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppealDetail'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+
+  /api/assignments/{assignmentId}/audit:
+    get:
+      tags:
+        - Audit & Appeals
+      summary: Retrieve Append-Only Audit Trail Records
+      description: >
+        Retrieves immutable audit event records for the assignment (Actor, Action, Resource,
+        Before/After JSON, UTC timestamp, IP address, Reason). Strictly append-only; no update/delete
+        APIs exist (US-AUDIT-01, AR-03, DR-08).
+      operationId: getAuditTrail
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AssignmentIdParam'
+        - name: action
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [PUBLISH, UNPUBLISH, OVERRIDE, FINALIZE, REOPEN, EXPORT_IDENTITIES, REGENERATE_PAIRS]
+          description: Filter by specific administrative action.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+          description: Number of audit records to return.
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: Pagination offset.
+      responses:
+        '200':
+          description: Append-only audit trail logs.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditTrailResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  # ==========================================
+  # 9. Notification Service
+  # ==========================================
+  /api/notifications:
+    get:
+      tags:
+        - Notifications
+      summary: List Notifications for Current User
+      description: >
+        Retrieves in-app and milestone notifications (e.g. assignment opened, 48h deadline reminder,
+        extra pairs assigned, score finalized). Strictly omits grade values from messages per privacy
+        rule FR-NOTIF-06 (US-NOTIF-01).
+      operationId: listNotifications
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: unread_only
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Filter only unread notifications.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+          description: Number of notifications to return.
+      responses:
+        '200':
+          description: List of notifications.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationListResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/notifications/{notificationId}:read:
+    patch:
+      tags:
+        - Notifications
+      summary: Mark Notification as Read
+      description: >
+        Marks a specific user notification as read (US-NOTIF-01).
+      operationId: markNotificationRead
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Unique identifier of the notification.
+      responses:
+        '200':
+          description: Notification marked as read.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationItem'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+# ==========================================
+# Components: Schemas, Parameters, Responses
+# ==========================================
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Google OIDC verified JWT session token. Must be passed in the `Authorization: Bearer <token>` header.
+
+  parameters:
+    ClassroomIdParam:
+      name: classroomId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Unique identifier (UUID) of the classroom.
+
+    AssignmentIdParam:
+      name: assignmentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Unique identifier (UUID) of the assignment.
+
+  responses:
+    BadRequestError:
+      description: Bad Request — Request payload is malformed, invalid JSON, or unparseable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: BAD_REQUEST
+              message: Invalid JSON syntax or request parameters.
+              field: null
+              requestId: 01J9X8K9Z2M4NP7Q3R1T5V8W0Y
+
+    UnauthorizedError:
+      description: Unauthorized — Missing, expired, or invalid Bearer authentication token.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Missing or invalid authentication credentials.
+              field: null
+              requestId: 01J9X8K9Z2M4NP7Q3R1T5V8W0Y
+
+    ForbiddenError:
+      description: Forbidden — Authenticated user lacks the necessary role permissions (FR-AUTHZ-01).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: FORBIDDEN
+              message: Access forbidden. Student role cannot access instructor reports.
+              field: null
+              requestId: 01J9X8K9Z2M4NP7Q3R1T5V8W0Y
+
+    NotFoundError:
+      description: Not Found — Resource does not exist or belongs to another classroom (FR-AUTHZ-02).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: NOT_FOUND
+              message: The requested resource was not found.
+              field: null
+              requestId: 01J9X8K9Z2M4NP7Q3R1T5V8W0Y
+
+    ConflictError:
+      description: Conflict — Action violates state machine transition or uniqueness constraint.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: STATE_CONFLICT
+              message: Cannot modify criteria when assignment is not in DRAFT status.
+              field: status
+              requestId: 01J9X8K9Z2M4NP7Q3R1T5V8W0Y
+
+    UnprocessableEntityError:
+      description: Unprocessable Entity — Schema validation failed (e.g. weights != 100%, choice != 1..6).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: VALIDATION_ERROR
+              message: Criteria weight sum must equal 100.00% (currently 95.00%).
+              field: criteria
+              requestId: 01J9X8K9Z2M4NP7Q3R1T5V8W0Y
+
+    TooManyRequestsError:
+      description: Too Many Requests — Rate limit exceeded (FR-API-04).
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              code: RATE_LIMIT_EXCEEDED
+              message: Rate limit of 120 req/min exceeded. Please retry after indicated duration.
+              field: null
+              requestId: 01J9X8K9Z2M4NP7Q3R1T5V8W0Y
+
+  schemas:
+    # ----------------------------------------
+    # Error Schemas (Consistent Shape across all responses)
+    # ----------------------------------------
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorDetail'
+
+    ErrorDetail:
+      type: object
+      required:
+        - code
+        - message
+        - requestId
+      properties:
+        code:
+          type: string
+          description: Standardized machine-readable error code.
+          example: DEADLINE_PASSED
+        message:
+          type: string
+          description: Human-readable error description in Thai or English.
+          example: The evaluation deadline for this assignment has passed.
+        field:
+          type: string
+          nullable: true
+          description: Specific field that caused the error, if applicable.
+          example: individual_deadline_utc
+        requestId:
+          type: string
+          description: Unique request correlation ID for tracing.
+          example: 01J9X8K9Z2M4NP7Q3R1T5V8W0Y
+        details:
+          type: array
+          description: Granular validation failure items (e.g. CSV row errors).
+          items:
+            $ref: '#/components/schemas/ErrorRowDetail'
+
+    ErrorRowDetail:
+      type: object
+      required:
+        - row
+        - message
+      properties:
+        row:
+          type: integer
+          description: CSV row index where validation failed.
+          example: 42
+        field:
+          type: string
+          description: Field name in the CSV row.
+          example: email
+        message:
+          type: string
+          description: Specific error detail for this row.
+          example: Invalid email format
+
+    # ----------------------------------------
+    # Auth Schemas
+    # ----------------------------------------
+    GoogleAuthRequest:
+      type: object
+      required:
+        - id_token
+      properties:
+        id_token:
+          type: string
+          description: Google OAuth 2.0 / OIDC ID token string.
+          example: eyJhbGciOiJSUzI1NiIsImtpZCI6Ij...
+
+    AuthTokenResponse:
+      type: object
+      required:
+        - access_token
+        - token_type
+        - expires_in
+        - user
+      properties:
+        access_token:
+          type: string
+          description: Session JWT bearer token.
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        token_type:
+          type: string
+          enum: [Bearer]
+          example: Bearer
+        expires_in:
+          type: integer
+          description: Token validity duration in seconds (43,200s = 12h).
+          example: 43200
+        user:
+          $ref: '#/components/schemas/UserSummary'
+
+    UserSummary:
+      type: object
+      required:
+        - id
+        - email_normalized
+        - display_name
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+        email_normalized:
+          type: string
+          format: email
+          example: somchai.a@uni.ac.th
+        display_name:
+          type: string
+          example: Somchai Anan
+        status:
+          type: string
+          enum: [PENDING, ACTIVE, DISABLED]
+          example: ACTIVE
+
+    UserProfileResponse:
+      type: object
+      required:
+        - user
+        - enrolled_classrooms
+      properties:
+        user:
+          $ref: '#/components/schemas/UserSummary'
+        enrolled_classrooms:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserClassroomMembership'
+
+    UserClassroomMembership:
+      type: object
+      required:
+        - classroom_id
+        - classroom_name
+        - classroom_slug
+        - role
+      properties:
+        classroom_id:
+          type: string
+          format: uuid
+          example: 11111111-2222-3333-4444-555555555555
+        classroom_name:
+          type: string
+          example: Software Engineering 2026/1
+        classroom_slug:
+          type: string
+          example: cpe-se-2026
+        role:
+          type: string
+          enum: [OWNER, CO_TEACHER, TA, STUDENT]
+          example: STUDENT
+        group_id:
+          type: string
+          format: uuid
+          nullable: true
+          example: 22222222-3333-4444-5555-666666666666
+        group_name:
+          type: string
+          nullable: true
+          example: Aurora
+
+    # ----------------------------------------
+    # Classroom & Roster Schemas
+    # ----------------------------------------
+    ClassroomSummary:
+      type: object
+      required:
+        - id
+        - name
+        - slug
+        - timezone
+        - status
+        - my_role
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 11111111-2222-3333-4444-555555555555
+        name:
+          type: string
+          example: Software Engineering 2026/1
+        slug:
+          type: string
+          example: cpe-se-2026
+        timezone:
+          type: string
+          example: Asia/Bangkok
+        status:
+          type: string
+          enum: [ACTIVE, ARCHIVED]
+          example: ACTIVE
+        my_role:
+          type: string
+          enum: [OWNER, CO_TEACHER, TA, STUDENT]
+          example: OWNER
+        created_at:
+          type: string
+          format: date-time
+          example: 2026-08-01T09:00:00Z
+
+    CreateClassroomRequest:
+      type: object
+      required:
+        - name
+        - slug
+        - timezone
+        - allowed_email_domains
+      properties:
+        name:
+          type: string
+          example: Software Engineering 2026/1
+        slug:
+          type: string
+          example: cpe-se-2026
+        timezone:
+          type: string
+          example: Asia/Bangkok
+        allowed_email_domains:
+          type: array
+          items:
+            type: string
+          example:
+            - uni.ac.th
+            - student.uni.ac.th
+
+    UpdateClassroomRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Software Engineering 2026/1 (Updated)
+        timezone:
+          type: string
+          example: Asia/Bangkok
+        allowed_email_domains:
+          type: array
+          items:
+            type: string
+          example:
+            - uni.ac.th
+        status:
+          type: string
+          enum: [ACTIVE, ARCHIVED]
+          example: ARCHIVED
+
+    ClassroomDetail:
+      type: object
+      required:
+        - id
+        - name
+        - slug
+        - timezone
+        - allowed_email_domains
+        - status
+        - created_by
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 11111111-2222-3333-4444-555555555555
+        name:
+          type: string
+          example: Software Engineering 2026/1
+        slug:
+          type: string
+          example: cpe-se-2026
+        timezone:
+          type: string
+          example: Asia/Bangkok
+        allowed_email_domains:
+          type: array
+          items:
+            type: string
+          example:
+            - uni.ac.th
+        status:
+          type: string
+          enum: [ACTIVE, ARCHIVED]
+          example: ACTIVE
+        created_by:
+          type: string
+          format: uuid
+          example: a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+        created_at:
+          type: string
+          format: date-time
+          example: 2026-08-01T09:00:00Z
+
+    ClassroomMember:
+      type: object
+      required:
+        - id
+        - user_id
+        - email
+        - display_name
+        - role
+        - joined_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 33333333-4444-5555-6666-777777777777
+        user_id:
+          type: string
+          format: uuid
+          example: a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+        email:
+          type: string
+          format: email
+          example: somchai.a@uni.ac.th
+        display_name:
+          type: string
+          example: Somchai Anan
+        role:
+          type: string
+          enum: [OWNER, CO_TEACHER, TA, STUDENT]
+          example: STUDENT
+        group_id:
+          type: string
+          format: uuid
+          nullable: true
+          example: 22222222-3333-4444-5555-666666666666
+        group_name:
+          type: string
+          nullable: true
+          example: Aurora
+        joined_at:
+          type: string
+          format: date-time
+          example: 2026-08-01T10:00:00Z
+
+    AddMemberRequest:
+      type: object
+      required:
+        - email
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+          example: co_teacher@uni.ac.th
+        role:
+          type: string
+          enum: [CO_TEACHER, TA]
+          example: CO_TEACHER
+
+    ClassroomRosterResponse:
+      type: object
+      required:
+        - classroom_id
+        - members_count
+        - groups_count
+        - members
+        - groups
+      properties:
+        classroom_id:
+          type: string
+          format: uuid
+          example: 11111111-2222-3333-4444-555555555555
+        members_count:
+          type: integer
+          example: 45
+        groups_count:
+          type: integer
+          example: 9
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClassroomMember'
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupSummary'
+
+    GroupSummary:
+      type: object
+      required:
+        - id
+        - name
+        - member_count
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 22222222-3333-4444-5555-666666666666
+        name:
+          type: string
+          example: Aurora
+        member_count:
+          type: integer
+          example: 5
+
+    RosterImportResult:
+      type: object
+      required:
+        - mode
+        - dry_run
+        - total_rows
+        - students_created
+        - students_updated
+        - groups_created
+        - groups_updated
+        - warnings
+      properties:
+        mode:
+          type: string
+          enum: [REPLACE, UPSERT]
+          example: UPSERT
+        dry_run:
+          type: boolean
+          example: false
+        total_rows:
+          type: integer
+          example: 45
+        students_created:
+          type: integer
+          example: 40
+        students_updated:
+          type: integer
+          example: 5
+        groups_created:
+          type: integer
+          example: 9
+        groups_updated:
+          type: integer
+          example: 0
+        diff:
+          type: array
+          description: Diff entries when dry_run=true or upserting.
+          items:
+            type: object
+            required:
+              - email
+              - action
+            properties:
+              email:
+                type: string
+                example: somchai.a@uni.ac.th
+              action:
+                type: string
+                enum: [ADDED, MOVED_GROUP, UNCHANGED]
+                example: MOVED_GROUP
+              old_group:
+                type: string
+                nullable: true
+                example: Alpha
+              new_group:
+                type: string
+                example: Aurora
+        warnings:
+          type: array
+          items:
+            type: string
+          example:
+            - 'Group "Zeta" has only 2 members; recommended size is 4-7 students.'
+
+    # ----------------------------------------
+    # Assignment & Criteria Schemas
+    # ----------------------------------------
+    CriterionInput:
+      type: object
+      required:
+        - side
+        - name
+        - description
+        - weight_pct
+        - display_order
+      properties:
+        side:
+          type: string
+          enum: [GROUP, INDIVIDUAL]
+          example: GROUP
+        name:
+          type: string
+          example: Technical Implementation
+        description:
+          type: string
+          example: Code cleanliness, architectural integrity, and test coverage.
+        weight_pct:
+          type: number
+          format: double
+          description: Criteria weight percentage (must sum to 100.00% per side).
+          example: 40.0
+        display_order:
+          type: integer
+          example: 1
+
+    CriterionDetail:
+      type: object
+      required:
+        - id
+        - side
+        - name
+        - description
+        - weight_pct
+        - display_order
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 44444444-5555-6666-7777-888888888888
+        side:
+          type: string
+          enum: [GROUP, INDIVIDUAL]
+          example: GROUP
+        name:
+          type: string
+          example: Technical Implementation
+        description:
+          type: string
+          example: Code cleanliness, architectural integrity, and test coverage.
+        weight_pct:
+          type: number
+          format: double
+          example: 40.0
+        display_order:
+          type: integer
+          example: 1
+
+    CreateAssignmentRequest:
+      type: object
+      required:
+        - name
+        - slug
+        - description
+        - group_max_score
+        - individual_max_score
+        - group_deadline_utc
+        - criteria
+      properties:
+        name:
+          type: string
+          example: Project Milestone 1
+        slug:
+          type: string
+          example: project-m1
+        description:
+          type: string
+          example: Peer evaluation of prototype deliverables and architecture designs.
+        artifact_url:
+          type: string
+          format: uri
+          nullable: true
+          example: https://classroom.google.com/c/deliverables/m1
+        group_max_score:
+          type: number
+          format: double
+          example: 15.0
+        individual_max_score:
+          type: number
+          format: double
+          description: Max score for individual peer evaluation (set to 0 to disable individual evaluation).
+          example: 5.0
+        group_deadline_utc:
+          type: string
+          format: date-time
+          example: 2026-09-01T17:00:00Z
+        individual_deadline_utc:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2026-09-02T17:00:00Z
+        instructor_weight:
+          type: number
+          format: double
+          default: 3.0
+          example: 3.0
+        target_coverage:
+          type: integer
+          default: 5
+          example: 5
+        max_workload:
+          type: integer
+          default: 8
+          example: 8
+        min_comparisons:
+          type: integer
+          default: 3
+          example: 3
+        score_floor:
+          type: number
+          format: double
+          default: 0.600
+          example: 0.600
+        score_ceiling:
+          type: number
+          format: double
+          default: 1.000
+          example: 1.000
+        completion_threshold:
+          type: number
+          format: double
+          default: 0.900
+          example: 0.900
+        criteria:
+          type: array
+          items:
+            $ref: '#/components/schemas/CriterionInput'
+
+    UpdateAssignmentRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Project Milestone 1 (Extended)
+        description:
+          type: string
+          example: Updated instructions for peer review.
+        artifact_url:
+          type: string
+          format: uri
+          nullable: true
+          example: https://classroom.google.com/c/deliverables/m1-updated
+        group_max_score:
+          type: number
+          format: double
+          example: 15.0
+        individual_max_score:
+          type: number
+          format: double
+          example: 5.0
+        group_deadline_utc:
+          type: string
+          format: date-time
+          example: 2026-09-05T17:00:00Z
+        individual_deadline_utc:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2026-09-06T17:00:00Z
+        instructor_weight:
+          type: number
+          format: double
+          example: 3.0
+        criteria:
+          type: array
+          items:
+            $ref: '#/components/schemas/CriterionInput'
+
+    AssignmentSummary:
+      type: object
+      required:
+        - id
+        - classroom_id
+        - name
+        - slug
+        - status
+        - group_deadline_utc
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 55555555-6666-7777-8888-999999999999
+        classroom_id:
+          type: string
+          format: uuid
+          example: 11111111-2222-3333-4444-555555555555
+        name:
+          type: string
+          example: Project Milestone 1
+        slug:
+          type: string
+          example: project-m1
+        status:
+          type: string
+          enum: [DRAFT, PUBLISHED, OPEN, CLOSED, FINALIZED, ARCHIVED]
+          example: OPEN
+        group_deadline_utc:
+          type: string
+          format: date-time
+          example: 2026-09-01T17:00:00Z
+        individual_deadline_utc:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2026-09-02T17:00:00Z
+        created_at:
+          type: string
+          format: date-time
+          example: 2026-08-15T08:00:00Z
+
+    AssignmentDetail:
+      type: object
+      required:
+        - id
+        - classroom_id
+        - name
+        - slug
+        - description
+        - group_max_score
+        - individual_max_score
+        - group_deadline_utc
+        - instructor_weight
+        - target_coverage
+        - max_workload
+        - min_comparisons
+        - score_floor
+        - score_ceiling
+        - completion_threshold
+        - scoring_formula_version
+        - status
+        - criteria
+        - created_by
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 55555555-6666-7777-8888-999999999999
+        classroom_id:
+          type: string
+          format: uuid
+          example: 11111111-2222-3333-4444-555555555555
+        name:
+          type: string
+          example: Project Milestone 1
+        slug:
+          type: string
+          example: project-m1
+        description:
+          type: string
+          example: Peer evaluation of prototype deliverables.
+        artifact_url:
+          type: string
+          format: uri
+          nullable: true
+          example: https://classroom.google.com/c/deliverables/m1
+        group_max_score:
+          type: number
+          format: double
+          example: 15.0
+        individual_max_score:
+          type: number
+          format: double
+          example: 5.0
+        group_deadline_utc:
+          type: string
+          format: date-time
+          example: 2026-09-01T17:00:00Z
+        individual_deadline_utc:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2026-09-02T17:00:00Z
+        instructor_weight:
+          type: number
+          format: double
+          example: 3.0
+        target_coverage:
+          type: integer
+          example: 5
+        max_workload:
+          type: integer
+          example: 8
+        min_comparisons:
+          type: integer
+          example: 3
+        score_floor:
+          type: number
+          format: double
+          example: 0.600
+        score_ceiling:
+          type: number
+          format: double
+          example: 1.000
+        completion_threshold:
+          type: number
+          format: double
+          example: 0.900
+        scoring_formula_version:
+          type: string
+          example: v2.0
+        pairing_seed:
+          type: integer
+          format: int64
+          nullable: true
+          example: 987654321
+        status:
+          type: string
+          enum: [DRAFT, PUBLISHED, OPEN, CLOSED, FINALIZED, ARCHIVED]
+          example: OPEN
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2026-08-20T08:00:00Z
+        finalized_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+        criteria:
+          type: array
+          items:
+            $ref: '#/components/schemas/CriterionDetail'
+        created_by:
+          type: string
+          format: uuid
+          example: a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+        created_at:
+          type: string
+          format: date-time
+          example: 2026-08-15T08:00:00Z
+
+    ReasonedActionRequest:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          description: Mandatory justification reason recorded to the audit trail.
+          example: Need to update criteria weights and re-align rubric before evaluation opens.
+
+    FinalizeAssignmentRequest:
+      type: object
+      properties:
+        force_low_confidence:
+          type: boolean
+          default: false
+          description: Set to true to bypass low confidence comparison warnings and proceed with finalization.
+        reason:
+          type: string
+          nullable: true
+          description: Optional note recorded in snapshot audit log.
+          example: Finalized after resolving all appeal disputes.
+
+    # ----------------------------------------
+    # Pairing Engine Schemas
+    # ----------------------------------------
+    FeasibilityReportResponse:
+      type: object
+      required:
+        - is_feasible
+        - requested_coverage
+        - effective_coverage
+        - students_count
+        - groups_count
+        - workload_per_student
+        - total_comparisons_scheduled
+        - explanation
+      properties:
+        is_feasible:
+          type: boolean
+          example: true
+        requested_coverage:
+          type: integer
+          example: 5
+        effective_coverage:
+          type: integer
+          description: Calculated attainable coverage after mathematical reduction (§8.2).
+          example: 5
+        students_count:
+          type: integer
+          example: 45
+        groups_count:
+          type: integer
+          example: 9
+        workload_per_student:
+          type: integer
+          example: 6
+        total_comparisons_scheduled:
+          type: integer
+          example: 270
+        explanation:
+          type: string
+          example: Feasible. 45 students across 9 groups achieve target coverage R=5 with workload k=6 pairs/student.
+        warnings:
+          type: array
+          items:
+            type: string
+          example: []
+
+    AddEvaluatorsRequest:
+      type: object
+      required:
+        - pair_assignment_id
+      properties:
+        pair_assignment_id:
+          type: string
+          format: uuid
+          example: 66666666-7777-8888-9999-000000000000
+        evaluator_count:
+          type: integer
+          default: 1
+          description: Number of additional random eligible evaluators to assign.
+          example: 2
+        instructor_self_eval:
+          type: boolean
+          default: false
+          description: If true, assigns the requesting instructor to evaluate with instructor_weight.
+          example: false
+
+    AddEvaluatorsResponse:
+      type: object
+      required:
+        - pair_assignment_id
+        - assigned_evaluators_count
+        - evaluator_user_ids
+        - message
+      properties:
+        pair_assignment_id:
+          type: string
+          format: uuid
+          example: 66666666-7777-8888-9999-000000000000
+        assigned_evaluators_count:
+          type: integer
+          example: 2
+        evaluator_user_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          example:
+            - a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+            - b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7e
+        message:
+          type: string
+          example: Successfully scheduled 2 extra evaluators for low-coverage pair.
+
+    # ----------------------------------------
+    # Evaluation Workflow Schemas
+    # ----------------------------------------
+    EvaluationItemView:
+      type: object
+      required:
+        - pair_assignment_id
+        - criterion_id
+        - criterion_name
+        - criterion_description
+        - side
+        - display_left_item_id
+        - display_left_title
+        - display_right_item_id
+        - display_right_title
+        - status
+      properties:
+        pair_assignment_id:
+          type: string
+          format: uuid
+          example: 66666666-7777-8888-9999-000000000000
+        criterion_id:
+          type: string
+          format: uuid
+          example: 44444444-5555-6666-7777-888888888888
+        criterion_name:
+          type: string
+          example: Technical Implementation
+        criterion_description:
+          type: string
+          example: Code cleanliness and structure.
+        side:
+          type: string
+          enum: [GROUP, INDIVIDUAL]
+          example: GROUP
+        display_left_item_id:
+          type: string
+          format: uuid
+          example: 22222222-3333-4444-5555-666666666666
+        display_left_title:
+          type: string
+          example: Group Aurora
+        display_left_artifact_url:
+          type: string
+          format: uri
+          nullable: true
+          example: https://classroom.google.com/artifacts/aurora
+        display_right_item_id:
+          type: string
+          format: uuid
+          example: 77777777-8888-9999-aaaa-bbbbbbbbbbbb
+        display_right_title:
+          type: string
+          example: Group Borealis
+        display_right_artifact_url:
+          type: string
+          format: uri
+          nullable: true
+          example: https://classroom.google.com/artifacts/borealis
+        choice:
+          type: integer
+          nullable: true
+          description: 'Selected forced-choice value: 1 (Left strong), 2 (Left moderate), 3 (Left slight), 4 (Right slight), 5 (Right moderate), 6 (Right strong).'
+          example: 2
+        status:
+          type: string
+          enum: [DRAFT, SUBMITTED, EXCLUDED]
+          example: DRAFT
+        saved_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: 2026-08-24T10:30:00Z
+
+    MyEvaluationsResponse:
+      type: object
+      required:
+        - assignment_id
+        - side
+        - total_pairs
+        - answered_pairs
+        - status
+        - deadline_utc
+        - pairs
+      properties:
+        assignment_id:
+          type: string
+          format: uuid
+          example: 55555555-6666-7777-8888-999999999999
+        side:
+          type: string
+          enum: [GROUP, INDIVIDUAL]
+          example: GROUP
+        total_pairs:
+          type: integer
+          example: 6
+        answered_pairs:
+          type: integer
+          example: 4
+        status:
+          type: string
+          enum: [NOT_STARTED, IN_PROGRESS, SUBMITTED]
+          example: IN_PROGRESS
+        deadline_utc:
+          type: string
+          format: date-time
+          example: 2026-09-01T17:00:00Z
+        disabled_reason:
+          type: string
+          nullable: true
+          description: Populated if individual evaluation is disabled (e.g. group size <= 2).
+          example: null
+        pairs:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvaluationItemView'
+
+    AutosaveComparisonRequest:
+      type: object
+      required:
+        - choice
+        - time_on_task_ms
+      properties:
+        choice:
+          type: integer
+          minimum: 1
+          maximum: 6
+          description: Forced-choice selection (1..6).
+          example: 2
+        time_on_task_ms:
+          type: integer
+          minimum: 0
+          description: Elapsed interaction duration in milliseconds.
+          example: 5400
+
+    ComparisonDraftResponse:
+      type: object
+      required:
+        - pair_assignment_id
+        - choice
+        - status
+        - saved_at
+      properties:
+        pair_assignment_id:
+          type: string
+          format: uuid
+          example: 66666666-7777-8888-9999-000000000000
+        choice:
+          type: integer
+          example: 2
+        status:
+          type: string
+          enum: [DRAFT, SUBMITTED]
+          example: DRAFT
+        saved_at:
+          type: string
+          format: date-time
+          example: 2026-08-24T10:30:00Z
+
+    SubmitEvaluationsRequest:
+      type: object
+      required:
+        - side
+      properties:
+        side:
+          type: string
+          enum: [GROUP, INDIVIDUAL]
+          example: GROUP
+
+    SubmissionReceiptResponse:
+      type: object
+      required:
+        - assignment_id
+        - side
+        - revision_no
+        - total_pairs
+        - submitted_pairs
+        - unanswered_pairs
+        - submitted_at
+        - receipt_id
+      properties:
+        assignment_id:
+          type: string
+          format: uuid
+          example: 55555555-6666-7777-8888-999999999999
+        side:
+          type: string
+          enum: [GROUP, INDIVIDUAL]
+          example: GROUP
+        revision_no:
+          type: integer
+          description: Sequential submission revision count.
+          example: 1
+        total_pairs:
+          type: integer
+          example: 6
+        submitted_pairs:
+          type: integer
+          example: 6
+        unanswered_pairs:
+          type: integer
+          example: 0
+        submitted_at:
+          type: string
+          format: date-time
+          example: 2026-08-24T10:35:00Z
+        receipt_id:
+          type: string
+          format: uuid
+          example: 88888888-9999-0000-aaaa-bbbbbbbbbbbb
+
+    ComparisonDetail:
+      type: object
+      required:
+        - id
+        - pair_assignment_id
+        - evaluator_pseudonym
+        - choice
+        - status
+        - submitted_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 77777777-8888-9999-0000-111111111111
+        pair_assignment_id:
+          type: string
+          format: uuid
+          example: 66666666-7777-8888-9999-000000000000
+        evaluator_pseudonym:
+          type: string
+          example: EVAL-042
+        choice:
+          type: integer
+          example: 2
+        status:
+          type: string
+          enum: [DRAFT, SUBMITTED, EXCLUDED]
+          example: EXCLUDED
+        submitted_at:
+          type: string
+          format: date-time
+          example: 2026-08-24T10:35:00Z
+        excluded_reason:
+          type: string
+          nullable: true
+          example: Flagged for straight-lining and speed running.
+
+    ExcludeComparisonRequest:
+      type: object
+      required:
+        - excluded
+        - reason
+      properties:
+        excluded:
+          type: boolean
+          example: true
+        reason:
+          type: string
+          description: Mandatory justification for excluding comparison.
+          example: Evaluator submitted all identical choices in under 2 seconds per item.
+
+    # ----------------------------------------
+    # Scoring & Reports Schemas
+    # ----------------------------------------
+    StudentScoreResponse:
+      type: object
+      required:
+        - assignment_id
+        - assignment_name
+        - group_name
+        - group_score
+        - group_max_score
+        - is_finalized
+      properties:
+        assignment_id:
+          type: string
+          format: uuid
+          example: 55555555-6666-7777-8888-999999999999
+        assignment_name:
+          type: string
+          example: Project Milestone 1
+        group_name:
+          type: string
+          example: Aurora
+        group_score:
+          type: number
+          format: double
+          example: 12.798
+        group_max_score:
+          type: number
+          format: double
+          example: 15.0
+        individual_score:
+          type: number
+          format: double
+          nullable: true
+          description: Masked if comparison count < k_min (3) or individual evaluation not enabled.
+          example: 4.130
+        individual_max_score:
+          type: number
+          format: double
+          example: 5.0
+        participation_ratio:
+          type: number
+          format: double
+          nullable: true
+          example: 1.000
+        participation_multiplier:
+          type: number
+          format: double
+          nullable: true
+          example: 1.000
+        total_score:
+          type: number
+          format: double
+          nullable: true
+          example: 16.928
+        total_max_score:
+          type: number
+          format: double
+          example: 20.0
+        k_anonymity_satisfied:
+          type: boolean
+          description: False if individual scores are masked to protect peer privacy (FR-ANON-02).
+          example: true
+        k_anonymity_message:
+          type: string
+          nullable: true
+          example: null
+        is_finalized:
+          type: boolean
+          example: true
+
+    GroupCriterionScoreItem:
+      type: object
+      required:
+        - criterion_id
+        - criterion_name
+        - weight_pct
+        - comparison_count
+        - quality_index_q
+        - score_ratio
+        - weighted_score
+      properties:
+        criterion_id:
+          type: string
+          format: uuid
+          example: 44444444-5555-6666-7777-888888888888
+        criterion_name:
+          type: string
+          example: Technical Implementation
+        weight_pct:
+          type: number
+          format: double
+          example: 40.0
+        comparison_count:
+          type: integer
+          example: 5
+        quality_index_q:
+          type: number
+          format: double
+          example: 0.720
+        score_ratio:
+          type: number
+          format: double
+          example: 0.888
+        weighted_score:
+          type: number
+          format: double
+          example: 5.328
+
+    GroupScoreRow:
+      type: object
+      required:
+        - group_id
+        - group_name
+        - total_score
+        - max_score
+        - flags
+        - criteria_scores
+      properties:
+        group_id:
+          type: string
+          format: uuid
+          example: 22222222-3333-4444-5555-666666666666
+        group_name:
+          type: string
+          example: Aurora
+        total_score:
+          type: number
+          format: double
+          example: 12.798
+        max_score:
+          type: number
+          format: double
+          example: 15.0
+        flags:
+          type: array
+          items:
+            type: string
+          example: []
+        criteria_scores:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupCriterionScoreItem'
+
+    GroupSummaryReportResponse:
+      type: object
+      required:
+        - assignment_id
+        - group_max_score
+        - formula_version
+        - groups
+      properties:
+        assignment_id:
+          type: string
+          format: uuid
+          example: 55555555-6666-7777-8888-999999999999
+        group_max_score:
+          type: number
+          format: double
+          example: 15.0
+        formula_version:
+          type: string
+          example: v2.0
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupScoreRow'
+
+    IndividualScoreRow:
+      type: object
+      required:
+        - user_id
+        - student_id
+        - display_name
+        - email
+        - group_name
+        - raw_individual_score
+        - participation_ratio_p
+        - multiplier_m
+        - net_individual_score
+        - group_score
+        - total_net_score
+        - flags
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          example: a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+        student_id:
+          type: string
+          example: '66010001'
+        display_name:
+          type: string
+          example: Somchai Anan
+        email:
+          type: string
+          format: email
+          example: somchai.a@uni.ac.th
+        group_name:
+          type: string
+          example: Aurora
+        raw_individual_score:
+          type: number
+          format: double
+          example: 4.130
+        participation_ratio_p:
+          type: number
+          format: double
+          example: 1.000
+        multiplier_m:
+          type: number
+          format: double
+          example: 1.000
+        net_individual_score:
+          type: number
+          format: double
+          example: 4.130
+        group_score:
+          type: number
+          format: double
+          example: 12.798
+        total_net_score:
+          type: number
+          format: double
+          example: 16.928
+        flags:
+          type: array
+          items:
+            type: string
+          example: []
+
+    IndividualSummaryReportResponse:
+      type: object
+      required:
+        - assignment_id
+        - individual_max_score
+        - total_max_score
+        - formula_version
+        - students
+        - distribution_histogram
+      properties:
+        assignment_id:
+          type: string
+          format: uuid
+          example: 55555555-6666-7777-8888-999999999999
+        individual_max_score:
+          type: number
+          format: double
+          example: 5.0
+        total_max_score:
+          type: number
+          format: double
+          example: 20.0
+        formula_version:
+          type: string
+          example: v2.0
+        students:
+          type: array
+          items:
+            $ref: '#/components/schemas/IndividualScoreRow'
+        distribution_histogram:
+          type: array
+          items:
+            type: object
+            required:
+              - score_range
+              - count
+            properties:
+              score_range:
+                type: string
+                example: '16.0-18.0'
+              count:
+                type: integer
+                example: 22
+
+    PairCoverageItem:
+      type: object
+      required:
+        - pair_id
+        - criterion_id
+        - criterion_name
+        - side
+        - item_a_name
+        - item_b_name
+        - scheduled_coverage
+        - submitted_coverage
+        - is_low_coverage
+      properties:
+        pair_id:
+          type: string
+          format: uuid
+          example: 66666666-7777-8888-9999-000000000000
+        criterion_id:
+          type: string
+          format: uuid
+          example: 44444444-5555-6666-7777-888888888888
+        criterion_name:
+          type: string
+          example: Technical Implementation
+        side:
+          type: string
+          enum: [GROUP, INDIVIDUAL]
+          example: GROUP
+        item_a_name:
+          type: string
+          example: Aurora
+        item_b_name:
+          type: string
+          example: Borealis
+        scheduled_coverage:
+          type: integer
+          example: 5
+        submitted_coverage:
+          type: integer
+          example: 4
+        is_low_coverage:
+          type: boolean
+          example: false
+
+    PairCoverageReportResponse:
+      type: object
+      required:
+        - assignment_id
+        - min_comparisons_threshold
+        - total_pairs
+        - low_coverage_pairs_count
+        - pairs
+      properties:
+        assignment_id:
+          type: string
+          format: uuid
+          example: 55555555-6666-7777-8888-999999999999
+        min_comparisons_threshold:
+          type: integer
+          example: 3
+        total_pairs:
+          type: integer
+          example: 36
+        low_coverage_pairs_count:
+          type: integer
+          example: 1
+        pairs:
+          type: array
+          items:
+            $ref: '#/components/schemas/PairCoverageItem'
+
+    QualitySignalFlag:
+      type: object
+      required:
+        - signal_code
+        - signal_name
+        - evaluator_pseudonym
+        - metric_value
+        - threshold
+        - description
+        - recommended_action
+      properties:
+        signal_code:
+          type: string
+          enum: [QS-01, QS-02, QS-03, QS-04, QS-05, QS-06, QS-07]
+          example: QS-03
+        signal_name:
+          type: string
+          example: Position Bias
+        evaluator_pseudonym:
+          type: string
+          example: EVAL-088
+        metric_value:
+          type: string
+          example: '85.7% left choice'
+        threshold:
+          type: string
+          example: '> 80.0%'
+        description:
+          type: string
+          example: Evaluator selected left side for 85.7% of comparisons.
+        recommended_action:
+          type: string
+          example: Review time-on-task and consider excluding if unreflective.
+
+    QualitySignalsReportResponse:
+      type: object
+      required:
+        - assignment_id
+        - total_evaluators_flagged
+        - kendall_concordance_w
+        - flags
+      properties:
+        assignment_id:
+          type: string
+          format: uuid
+          example: 55555555-6666-7777-8888-999999999999
+        total_evaluators_flagged:
+          type: integer
+          example: 3
+        kendall_concordance_w:
+          type: number
+          format: double
+          description: Overall inter-rater agreement concordance coefficient across criteria.
+          example: 0.68
+        flags:
+          type: array
+          items:
+            $ref: '#/components/schemas/QualitySignalFlag'
+
+    ScoreOverrideRequest:
+      type: object
+      required:
+        - side
+        - item_id
+        - override_value
+        - reason
+      properties:
+        side:
+          type: string
+          enum: [GROUP, INDIVIDUAL]
+          example: INDIVIDUAL
+        item_id:
+          type: string
+          format: uuid
+          description: Student User ID or Group ID.
+          example: a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+        criterion_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Specific criterion ID, or null to override overall total score.
+          example: null
+        override_value:
+          type: number
+          format: double
+          description: Overridden score value.
+          example: 4.800
+        reason:
+          type: string
+          description: Mandatory justification reason for the grade change.
+          example: Grade dispute resolved; student provided valid peer collaboration proof.
+
+    ScoreOverrideRecord:
+      type: object
+      required:
+        - id
+        - assignment_id
+        - side
+        - item_id
+        - original_value
+        - override_value
+        - reason
+        - created_by
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 99999999-0000-1111-2222-333333333333
+        assignment_id:
+          type: string
+          format: uuid
+          example: 55555555-6666-7777-8888-999999999999
+        side:
+          type: string
+          enum: [GROUP, INDIVIDUAL]
+          example: INDIVIDUAL
+        item_id:
+          type: string
+          format: uuid
+          example: a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+        criterion_id:
+          type: string
+          format: uuid
+          nullable: true
+          example: null
+        original_value:
+          type: number
+          format: double
+          example: 4.130
+        override_value:
+          type: number
+          format: double
+          example: 4.800
+        reason:
+          type: string
+          example: Grade dispute resolved; student provided valid peer collaboration proof.
+        created_by:
+          type: string
+          format: uuid
+          example: f1e2d3c4-b5a6-9788-7654-3210fedcba98
+        created_at:
+          type: string
+          format: date-time
+          example: 2026-08-25T14:20:00Z
+
+    ScoreRecomputeResponse:
+      type: object
+      required:
+        - assignment_id
+        - formula_version
+        - groups_computed
+        - individuals_computed
+        - recomputed_at
+      properties:
+        assignment_id:
+          type: string
+          format: uuid
+          example: 55555555-6666-7777-8888-999999999999
+        formula_version:
+          type: string
+          example: v2.0
+        groups_computed:
+          type: integer
+          example: 9
+        individuals_computed:
+          type: integer
+          example: 45
+        recomputed_at:
+          type: string
+          format: date-time
+          example: 2026-08-24T18:00:00Z
+
+    # ----------------------------------------
+    # Export Schemas
+    # ----------------------------------------
+    ExportRequest:
+      type: object
+      required:
+        - format
+        - report
+        - include_identities
+      properties:
+        format:
+          type: string
+          enum: [csv, xlsx]
+          example: csv
+        report:
+          type: string
+          enum: [group, individual, coverage, quality, raw]
+          example: individual
+        include_identities:
+          type: boolean
+          description: Set true to unmask true evaluator identities. Restricted to Owner role and logged to audit trail.
+          example: false
+
+    AsyncExportJobResponse:
+      type: object
+      required:
+        - job_id
+        - status
+        - message
+      properties:
+        job_id:
+          type: string
+          format: uuid
+          example: eeee4444-5555-6666-7777-888888888888
+        status:
+          type: string
+          enum: [QUEUED, PROCESSING]
+          example: QUEUED
+        message:
+          type: string
+          example: Export job queued. An email with download link will be dispatched upon completion.
+
+    # ----------------------------------------
+    # Appeals & Audit Schemas
+    # ----------------------------------------
+    CreateAppealRequest:
+      type: object
+      required:
+        - assignment_id
+        - message
+      properties:
+        assignment_id:
+          type: string
+          format: uuid
+          example: 55555555-6666-7777-8888-999999999999
+        message:
+          type: string
+          description: Student dispute statement regarding peer evaluations.
+          example: 'My peer evaluation score does not reflect my commits in GitHub repository #42.'
+
+    ResolveAppealRequest:
+      type: object
+      required:
+        - status
+        - resolution
+      properties:
+        status:
+          type: string
+          enum: [RESOLVED, REJECTED]
+          example: RESOLVED
+        resolution:
+          type: string
+          description: Instructor formal response and resolution rationale.
+          example: GitHub commit logs verified. Overriding individual score from 3.5 to 4.5.
+        override_value:
+          type: number
+          format: double
+          nullable: true
+          description: New score value if resolution involves score adjustment.
+          example: 4.500
+
+    AppealDetail:
+      type: object
+      required:
+        - id
+        - assignment_id
+        - student_user_id
+        - message
+        - status
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: bbbb1111-2222-3333-4444-555555555555
+        assignment_id:
+          type: string
+          format: uuid
+          example: 55555555-6666-7777-8888-999999999999
+        student_user_id:
+          type: string
+          format: uuid
+          example: a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+        student_name:
+          type: string
+          example: Somchai Anan
+        message:
+          type: string
+          example: 'My peer evaluation score does not reflect my commits in GitHub repository #42.'
+        status:
+          type: string
+          enum: [OPEN, RESOLVED, REJECTED]
+          example: OPEN
+        resolution:
+          type: string
+          nullable: true
+          example: null
+        resolved_by:
+          type: string
+          format: uuid
+          nullable: true
+          example: null
+        created_at:
+          type: string
+          format: date-time
+          example: 2026-08-25T09:00:00Z
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+
+    AuditEventItem:
+      type: object
+      required:
+        - id
+        - classroom_id
+        - actor_user_id
+        - action
+        - resource_type
+        - resource_id
+        - occurred_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: cccc2222-3333-4444-5555-666666666666
+        classroom_id:
+          type: string
+          format: uuid
+          example: 11111111-2222-3333-4444-555555555555
+        assignment_id:
+          type: string
+          format: uuid
+          nullable: true
+          example: 55555555-6666-7777-8888-999999999999
+        actor_user_id:
+          type: string
+          format: uuid
+          example: f1e2d3c4-b5a6-9788-7654-3210fedcba98
+        actor_name:
+          type: string
+          example: Dr. Prateep (Instructor)
+        action:
+          type: string
+          enum: [PUBLISH, UNPUBLISH, OVERRIDE, FINALIZE, REOPEN, EXPORT_IDENTITIES, REGENERATE_PAIRS]
+          example: OVERRIDE
+        resource_type:
+          type: string
+          enum: [ASSIGNMENT, SCORE, ROSTER, COMPARISON]
+          example: SCORE
+        resource_id:
+          type: string
+          format: uuid
+          example: a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+        before_json:
+          type: object
+          nullable: true
+          example:
+            score: 4.130
+        after_json:
+          type: object
+          nullable: true
+          example:
+            score: 4.800
+        reason:
+          type: string
+          nullable: true
+          example: Grade dispute resolved after verifying commit history.
+        ip_address:
+          type: string
+          nullable: true
+          example: 202.28.12.45
+        occurred_at:
+          type: string
+          format: date-time
+          example: 2026-08-25T14:20:00Z
+
+    AuditTrailResponse:
+      type: object
+      required:
+        - assignment_id
+        - total_records
+        - events
+      properties:
+        assignment_id:
+          type: string
+          format: uuid
+          example: 55555555-6666-7777-8888-999999999999
+        total_records:
+          type: integer
+          example: 12
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEventItem'
+
+    # ----------------------------------------
+    # Notification Schemas
+    # ----------------------------------------
+    NotificationItem:
+      type: object
+      required:
+        - id
+        - user_id
+        - type
+        - title
+        - message
+        - link_url
+        - is_read
+        - sent_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: dddd3333-4444-5555-6666-777777777777
+        user_id:
+          type: string
+          format: uuid
+          example: a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
+        type:
+          type: string
+          enum: [ASSIGNMENT_OPEN, DEADLINE_48H, FINALIZED, EXTRA_PAIR]
+          example: DEADLINE_48H
+        title:
+          type: string
+          example: 48 Hours Remaining for Milestone 1 Peer Evaluation
+        message:
+          type: string
+          description: Plaintext notification body. Strictly omits grade information per FR-NOTIF-06.
+          example: Please complete your remaining pairwise comparisons before the deadline on Sep 1 at 17:00 UTC.
+        link_url:
+          type: string
+          format: uri
+          example: https://paireval.university.ac.th/assignments/55555555-6666-7777-8888-999999999999/evaluations
+        is_read:
+          type: boolean
+          example: false
+        sent_at:
+          type: string
+          format: date-time
+          example: 2026-08-30T17:00:00Z
+        read_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+
+    NotificationListResponse:
+      type: object
+      required:
+        - total_unread
+        - notifications
+      properties:
+        total_unread:
+          type: integer
+          example: 1
+        notifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationItem'

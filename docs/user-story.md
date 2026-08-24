@@ -1,9 +1,5 @@
 # User Stories — PairEval (Pairwise Evaluation System)
 
-เอกสารรวบรวม User Stories ทั้งหมดของระบบประเมินผลนักศึกษาแบบ Pairwise Comparison (**PairEval**) อ้างอิงข้อกำหนดจาก [Product Requirements Document (PRD)](file:///home/king/Projects/spdx-board-game/project-ideas/pairwise_evaluation_prd.md) และเขียนตามมาตรฐาน [template/user-story.md](file:///home/king/Projects/spdx-board-game/template/user-story.md)
-
----
-
 ## สารบัญ User Stories
 
 | Epic / Module | Story ID | หัวข้อ | บทบาท (Role) | PRD Traceability |
