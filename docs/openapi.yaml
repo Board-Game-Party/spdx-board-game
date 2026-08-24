@@ -65,26 +65,26 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/GoogleAuthRequest'
+              $ref: "#/components/schemas/GoogleAuthRequest"
       responses:
-        '200':
+        "200":
           description: User authenticated successfully with a 12-hour session.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthTokenResponse'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
+                $ref: "#/components/schemas/AuthTokenResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
           description: Email domain not allowed under classroom restrictions (FR-AUTH-02) or account disabled.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntityError'
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntityError"
 
   /api/auth/me:
     get:
@@ -98,14 +98,14 @@ paths:
       security:
         - BearerAuth: []
       responses:
-        '200':
+        "200":
           description: Current user profile details.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserProfileResponse'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
+                $ref: "#/components/schemas/UserProfileResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
 
   # ==========================================
   # 2. Classrooms & Roster Management
@@ -131,16 +131,16 @@ paths:
             default: ACTIVE
           description: Filter by classroom operational status.
       responses:
-        '200':
+        "200":
           description: List of classrooms.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/ClassroomSummary'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
+                  $ref: "#/components/schemas/ClassroomSummary"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
 
     post:
       tags:
@@ -157,28 +157,28 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateClassroomRequest'
+              $ref: "#/components/schemas/CreateClassroomRequest"
       responses:
-        '201':
+        "201":
           description: Classroom successfully created.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ClassroomDetail'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '409':
+                $ref: "#/components/schemas/ClassroomDetail"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "409":
           description: Classroom slug already exists in the system.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntityError'
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntityError"
 
   /api/classrooms/{classroomId}:
     get:
@@ -192,18 +192,18 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/ClassroomIdParam'
+        - $ref: "#/components/parameters/ClassroomIdParam"
       responses:
-        '200':
+        "200":
           description: Classroom details.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ClassroomDetail'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
+                $ref: "#/components/schemas/ClassroomDetail"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
 
     patch:
       tags:
@@ -216,32 +216,32 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/ClassroomIdParam'
+        - $ref: "#/components/parameters/ClassroomIdParam"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateClassroomRequest'
+              $ref: "#/components/schemas/UpdateClassroomRequest"
       responses:
-        '200':
+        "200":
           description: Classroom successfully updated.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ClassroomDetail'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '409':
-          $ref: '#/components/responses/ConflictError'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntityError'
+                $ref: "#/components/schemas/ClassroomDetail"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntityError"
 
   /api/classrooms/{classroomId}/roster:
     get:
@@ -254,20 +254,20 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/ClassroomIdParam'
+        - $ref: "#/components/parameters/ClassroomIdParam"
       responses:
-        '200':
+        "200":
           description: Classroom roster and group assignments.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ClassroomRosterResponse'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
+                $ref: "#/components/schemas/ClassroomRosterResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
 
   /api/classrooms/{classroomId}/roster:import:
     post:
@@ -283,7 +283,7 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/ClassroomIdParam'
+        - $ref: "#/components/parameters/ClassroomIdParam"
       requestBody:
         required: true
         content:
@@ -307,36 +307,36 @@ paths:
                   default: false
                   description: If true, returns diff preview without saving changes.
       responses:
-        '200':
+        "200":
           description: Dry run diff preview successfully generated.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RosterImportResult'
-        '201':
+                $ref: "#/components/schemas/RosterImportResult"
+        "201":
           description: Roster CSV parsed and imported successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RosterImportResult'
-        '400':
+                $ref: "#/components/schemas/RosterImportResult"
+        "400":
           description: CSV parsing or row validation error (includes specific row number and reason).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '422':
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "422":
           description: Validation error such as group size < 2 or formula injection detected.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/classrooms/{classroomId}/members:
     post:
@@ -349,36 +349,36 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/ClassroomIdParam'
+        - $ref: "#/components/parameters/ClassroomIdParam"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AddMemberRequest'
+              $ref: "#/components/schemas/AddMemberRequest"
       responses:
-        '201':
+        "201":
           description: Classroom member successfully added.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ClassroomMember'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '409':
+                $ref: "#/components/schemas/ClassroomMember"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
           description: User is already a member of this classroom.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntityError'
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntityError"
 
   /api/classrooms/{classroomId}/members/{memberId}:
     delete:
@@ -392,7 +392,7 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/ClassroomIdParam'
+        - $ref: "#/components/parameters/ClassroomIdParam"
         - name: memberId
           in: path
           required: true
@@ -401,20 +401,20 @@ paths:
             format: uuid
           description: Unique identifier of the classroom member record.
       responses:
-        '204':
+        "204":
           description: Member successfully removed.
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '409':
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
           description: Cannot remove the last remaining Owner from the classroom.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
 
   # ==========================================
   # 3. Assignments & Criteria Setup
@@ -430,20 +430,20 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/ClassroomIdParam'
+        - $ref: "#/components/parameters/ClassroomIdParam"
       responses:
-        '200':
+        "200":
           description: List of assignments.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/AssignmentSummary'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
+                  $ref: "#/components/schemas/AssignmentSummary"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
 
     post:
       tags:
@@ -457,36 +457,36 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/ClassroomIdParam'
+        - $ref: "#/components/parameters/ClassroomIdParam"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateAssignmentRequest'
+              $ref: "#/components/schemas/CreateAssignmentRequest"
       responses:
-        '201':
+        "201":
           description: Assignment successfully created in DRAFT status.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AssignmentDetail'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '409':
-          $ref: '#/components/responses/ConflictError'
-        '422':
+                $ref: "#/components/schemas/AssignmentDetail"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+        "422":
           description: Criteria weight sum does not equal 100% or invalid deadline ranges.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/assignments/{assignmentId}:
     get:
@@ -499,20 +499,20 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/AssignmentIdParam'
+        - $ref: "#/components/parameters/AssignmentIdParam"
       responses:
-        '200':
+        "200":
           description: Assignment details.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AssignmentDetail'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
+                $ref: "#/components/schemas/AssignmentDetail"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
 
     patch:
       tags:
@@ -525,36 +525,36 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/AssignmentIdParam'
+        - $ref: "#/components/parameters/AssignmentIdParam"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateAssignmentRequest'
+              $ref: "#/components/schemas/UpdateAssignmentRequest"
       responses:
-        '200':
+        "200":
           description: Assignment updated successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AssignmentDetail'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '409':
+                $ref: "#/components/schemas/AssignmentDetail"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
           description: Cannot modify criteria or parameters when assignment is not in DRAFT status.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntityError'
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntityError"
 
   /api/assignments/{assignmentId}/feasibility:
     get:
@@ -569,20 +569,20 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/AssignmentIdParam'
+        - $ref: "#/components/parameters/AssignmentIdParam"
       responses:
-        '200':
+        "200":
           description: Pairing feasibility computation report.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/FeasibilityReportResponse'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
+                $ref: "#/components/schemas/FeasibilityReportResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
 
   /api/assignments/{assignmentId}:publish:
     post:
@@ -598,34 +598,34 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/AssignmentIdParam'
+        - $ref: "#/components/parameters/AssignmentIdParam"
       responses:
-        '200':
+        "200":
           description: Assignment published and pairs successfully generated.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AssignmentDetail'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '409':
+                $ref: "#/components/schemas/AssignmentDetail"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
           description: Assignment is not in DRAFT state or has invalid roster allocations.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '422':
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
           description: Criteria weights do not sum to 100% or insufficient students for pairing.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/assignments/{assignmentId}:unpublish:
     post:
@@ -639,32 +639,32 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/AssignmentIdParam'
+        - $ref: "#/components/parameters/AssignmentIdParam"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReasonedActionRequest'
+              $ref: "#/components/schemas/ReasonedActionRequest"
       responses:
-        '200':
+        "200":
           description: Assignment reverted to DRAFT status.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AssignmentDetail'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '409':
-          $ref: '#/components/responses/ConflictError'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntityError'
+                $ref: "#/components/schemas/AssignmentDetail"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntityError"
 
   /api/assignments/{assignmentId}:finalize:
     post:
@@ -680,36 +680,36 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/AssignmentIdParam'
+        - $ref: "#/components/parameters/AssignmentIdParam"
       requestBody:
         required: false
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/FinalizeAssignmentRequest'
+              $ref: "#/components/schemas/FinalizeAssignmentRequest"
       responses:
-        '200':
+        "200":
           description: Assignment finalized and score snapshot created.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AssignmentDetail'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '409':
+                $ref: "#/components/schemas/AssignmentDetail"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
           description: Unresolved LOW_CONFIDENCE items exist or assignment is not in CLOSED state.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntityError'
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntityError"
 
   /api/assignments/{assignmentId}:reopen:
     post:
@@ -723,32 +723,32 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/AssignmentIdParam'
+        - $ref: "#/components/parameters/AssignmentIdParam"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReasonedActionRequest'
+              $ref: "#/components/schemas/ReasonedActionRequest"
       responses:
-        '200':
+        "200":
           description: Assignment successfully reopened to CLOSED status.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AssignmentDetail'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '409':
-          $ref: '#/components/responses/ConflictError'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntityError'
+                $ref: "#/components/schemas/AssignmentDetail"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntityError"
 
   /api/assignments/{assignmentId}:recompute:
     post:
@@ -762,22 +762,22 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/AssignmentIdParam'
+        - $ref: "#/components/parameters/AssignmentIdParam"
       responses:
-        '200':
+        "200":
           description: Scores successfully recomputed.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ScoreRecomputeResponse'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '409':
-          $ref: '#/components/responses/ConflictError'
+                $ref: "#/components/schemas/ScoreRecomputeResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
 
   # ==========================================
   # 4. Pairing Engine & Extra Evaluators
@@ -794,32 +794,32 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/AssignmentIdParam'
+        - $ref: "#/components/parameters/AssignmentIdParam"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AddEvaluatorsRequest'
+              $ref: "#/components/schemas/AddEvaluatorsRequest"
       responses:
-        '201':
+        "201":
           description: Additional evaluators or instructor evaluation scheduled successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AddEvaluatorsResponse'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '409':
-          $ref: '#/components/responses/ConflictError'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntityError'
+                $ref: "#/components/schemas/AddEvaluatorsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntityError"
 
   # ==========================================
   # 5. Evaluation Workflow & Submissions
@@ -837,7 +837,7 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/AssignmentIdParam'
+        - $ref: "#/components/parameters/AssignmentIdParam"
         - name: side
           in: query
           required: true
@@ -846,20 +846,20 @@ paths:
             enum: [GROUP, INDIVIDUAL]
           description: Evaluation side filter (GROUP or INDIVIDUAL).
       responses:
-        '200':
+        "200":
           description: Assigned pairwise comparisons for the student.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MyEvaluationsResponse'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
+                $ref: "#/components/schemas/MyEvaluationsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
 
   /api/comparisons/{pairAssignmentId}:
     put:
@@ -886,34 +886,34 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AutosaveComparisonRequest'
+              $ref: "#/components/schemas/AutosaveComparisonRequest"
       responses:
-        '200':
+        "200":
           description: Draft comparison choice saved successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ComparisonDraftResponse'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '409':
+                $ref: "#/components/schemas/ComparisonDraftResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
           description: Evaluation deadline has passed; comparisons are locked as read-only.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '422':
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
           description: Choice value is not within the valid 6-point forced scale range [1..6].
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/assignments/{assignmentId}/submissions:
     post:
@@ -929,7 +929,7 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/AssignmentIdParam'
+        - $ref: "#/components/parameters/AssignmentIdParam"
         - name: Idempotency-Key
           in: header
           required: false
@@ -941,30 +941,30 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SubmitEvaluationsRequest'
+              $ref: "#/components/schemas/SubmitEvaluationsRequest"
       responses:
-        '201':
+        "201":
           description: Evaluation submission recorded and revision saved.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SubmissionReceiptResponse'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '409':
+                $ref: "#/components/schemas/SubmissionReceiptResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
           description: Deadline has passed or assignment is not open for submission.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntityError'
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntityError"
 
   /api/comparisons/{comparisonId}:exclude:
     post:
@@ -990,26 +990,26 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ExcludeComparisonRequest'
+              $ref: "#/components/schemas/ExcludeComparisonRequest"
       responses:
-        '200':
+        "200":
           description: Comparison excluded status updated successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ComparisonDetail'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '409':
-          $ref: '#/components/responses/ConflictError'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntityError'
+                $ref: "#/components/schemas/ComparisonDetail"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntityError"
 
   # ==========================================
   # 6. Scoring & Reports
@@ -1028,20 +1028,20 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/AssignmentIdParam'
+        - $ref: "#/components/parameters/AssignmentIdParam"
       responses:
-        '200':
+        "200":
           description: Personal score breakdown under privacy protection rules.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/StudentScoreResponse'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
+                $ref: "#/components/schemas/StudentScoreResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
 
   /api/assignments/{assignmentId}/reports/group:
     get:
@@ -1055,20 +1055,20 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/AssignmentIdParam'
+        - $ref: "#/components/parameters/AssignmentIdParam"
       responses:
-        '200':
+        "200":
           description: Group score breakdown and summary table.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GroupSummaryReportResponse'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
+                $ref: "#/components/schemas/GroupSummaryReportResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
 
   /api/assignments/{assignmentId}/reports/individual:
     get:
@@ -1082,20 +1082,20 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/AssignmentIdParam'
+        - $ref: "#/components/parameters/AssignmentIdParam"
       responses:
-        '200':
+        "200":
           description: Individual student scores and distribution metrics.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/IndividualSummaryReportResponse'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
+                $ref: "#/components/schemas/IndividualSummaryReportResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
 
   /api/assignments/{assignmentId}/reports/coverage:
     get:
@@ -1109,20 +1109,20 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/AssignmentIdParam'
+        - $ref: "#/components/parameters/AssignmentIdParam"
       responses:
-        '200':
+        "200":
           description: Pair coverage report details.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PairCoverageReportResponse'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
+                $ref: "#/components/schemas/PairCoverageReportResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
 
   /api/assignments/{assignmentId}/reports/quality:
     get:
@@ -1136,20 +1136,20 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/AssignmentIdParam'
+        - $ref: "#/components/parameters/AssignmentIdParam"
       responses:
-        '200':
+        "200":
           description: Quality signals and bias metrics summary.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/QualitySignalsReportResponse'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
+                $ref: "#/components/schemas/QualitySignalsReportResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
 
   /api/assignments/{assignmentId}/scores:override:
     post:
@@ -1164,36 +1164,36 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/AssignmentIdParam'
+        - $ref: "#/components/parameters/AssignmentIdParam"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ScoreOverrideRequest'
+              $ref: "#/components/schemas/ScoreOverrideRequest"
       responses:
-        '201':
+        "201":
           description: Score override recorded successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ScoreOverrideRecord'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '409':
-          $ref: '#/components/responses/ConflictError'
-        '422':
+                $ref: "#/components/schemas/ScoreOverrideRecord"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+        "422":
           description: Missing mandatory justification reason or score out of valid bounds.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
 
   # ==========================================
   # 7. Data Export
@@ -1211,15 +1211,15 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/AssignmentIdParam'
+        - $ref: "#/components/parameters/AssignmentIdParam"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ExportRequest'
+              $ref: "#/components/schemas/ExportRequest"
       responses:
-        '200':
+        "200":
           description: Binary file stream of the exported report.
           headers:
             Content-Disposition:
@@ -1235,28 +1235,28 @@ paths:
               schema:
                 type: string
                 format: binary
-        '202':
+        "202":
           description: Asynchronous export task queued for large classrooms (FR-API-05).
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AsyncExportJobResponse'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
+                $ref: "#/components/schemas/AsyncExportJobResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
           description: Only Owner can export identifiable records with true evaluator identities.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntityError'
-        '429':
-          $ref: '#/components/responses/TooManyRequestsError'
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntityError"
+        "429":
+          $ref: "#/components/responses/TooManyRequestsError"
 
   # ==========================================
   # 8. Appeals & Audit Trail
@@ -1276,30 +1276,30 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateAppealRequest'
+              $ref: "#/components/schemas/CreateAppealRequest"
       responses:
-        '201':
+        "201":
           description: Score dispute appeal submitted successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AppealDetail'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '409':
+                $ref: "#/components/schemas/AppealDetail"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
           description: Appeal submitted after the 7-day post-finalization appeal window has expired.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntityError'
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntityError"
 
   /api/assignments/{assignmentId}/appeals:
     get:
@@ -1312,22 +1312,22 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/AssignmentIdParam'
+        - $ref: "#/components/parameters/AssignmentIdParam"
       responses:
-        '200':
+        "200":
           description: List of submitted appeals.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/AppealDetail'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
+                  $ref: "#/components/schemas/AppealDetail"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
 
   /api/appeals/{appealId}:
     patch:
@@ -1353,26 +1353,26 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ResolveAppealRequest'
+              $ref: "#/components/schemas/ResolveAppealRequest"
       responses:
-        '200':
+        "200":
           description: Appeal resolution saved successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AppealDetail'
-        '400':
-          $ref: '#/components/responses/BadRequestError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '409':
-          $ref: '#/components/responses/ConflictError'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntityError'
+                $ref: "#/components/schemas/AppealDetail"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "409":
+          $ref: "#/components/responses/ConflictError"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntityError"
 
   /api/assignments/{assignmentId}/audit:
     get:
@@ -1387,13 +1387,22 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/AssignmentIdParam'
+        - $ref: "#/components/parameters/AssignmentIdParam"
         - name: action
           in: query
           required: false
           schema:
             type: string
-            enum: [PUBLISH, UNPUBLISH, OVERRIDE, FINALIZE, REOPEN, EXPORT_IDENTITIES, REGENERATE_PAIRS]
+            enum:
+              [
+                PUBLISH,
+                UNPUBLISH,
+                OVERRIDE,
+                FINALIZE,
+                REOPEN,
+                EXPORT_IDENTITIES,
+                REGENERATE_PAIRS,
+              ]
           description: Filter by specific administrative action.
         - name: limit
           in: query
@@ -1411,18 +1420,18 @@ paths:
             default: 0
           description: Pagination offset.
       responses:
-        '200':
+        "200":
           description: Append-only audit trail logs.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuditTrailResponse'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
+                $ref: "#/components/schemas/AuditTrailResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
 
   # ==========================================
   # 9. Notification Service
@@ -1456,14 +1465,14 @@ paths:
             maximum: 100
           description: Number of notifications to return.
       responses:
-        '200':
+        "200":
           description: List of notifications.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NotificationListResponse'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
+                $ref: "#/components/schemas/NotificationListResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
 
   /api/notifications/{notificationId}:read:
     patch:
@@ -1484,16 +1493,16 @@ paths:
             format: uuid
           description: Unique identifier of the notification.
       responses:
-        '200':
+        "200":
           description: Notification marked as read.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NotificationItem'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
+                $ref: "#/components/schemas/NotificationItem"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
 
 # ==========================================
 # Components: Schemas, Parameters, Responses
@@ -1532,7 +1541,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
           example:
             error:
               code: BAD_REQUEST
@@ -1545,7 +1554,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
           example:
             error:
               code: UNAUTHORIZED
@@ -1558,7 +1567,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
           example:
             error:
               code: FORBIDDEN
@@ -1571,7 +1580,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
           example:
             error:
               code: NOT_FOUND
@@ -1584,7 +1593,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
           example:
             error:
               code: STATE_CONFLICT
@@ -1597,7 +1606,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
           example:
             error:
               code: VALIDATION_ERROR
@@ -1615,7 +1624,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
           example:
             error:
               code: RATE_LIMIT_EXCEEDED
@@ -1633,7 +1642,7 @@ components:
         - error
       properties:
         error:
-          $ref: '#/components/schemas/ErrorDetail'
+          $ref: "#/components/schemas/ErrorDetail"
 
     ErrorDetail:
       type: object
@@ -1663,7 +1672,7 @@ components:
           type: array
           description: Granular validation failure items (e.g. CSV row errors).
           items:
-            $ref: '#/components/schemas/ErrorRowDetail'
+            $ref: "#/components/schemas/ErrorRowDetail"
 
     ErrorRowDetail:
       type: object
@@ -1718,7 +1727,7 @@ components:
           description: Token validity duration in seconds (43,200s = 12h).
           example: 43200
         user:
-          $ref: '#/components/schemas/UserSummary'
+          $ref: "#/components/schemas/UserSummary"
 
     UserSummary:
       type: object
@@ -1751,11 +1760,11 @@ components:
         - enrolled_classrooms
       properties:
         user:
-          $ref: '#/components/schemas/UserSummary'
+          $ref: "#/components/schemas/UserSummary"
         enrolled_classrooms:
           type: array
           items:
-            $ref: '#/components/schemas/UserClassroomMembership'
+            $ref: "#/components/schemas/UserClassroomMembership"
 
     UserClassroomMembership:
       type: object
@@ -1998,11 +2007,11 @@ components:
         members:
           type: array
           items:
-            $ref: '#/components/schemas/ClassroomMember'
+            $ref: "#/components/schemas/ClassroomMember"
         groups:
           type: array
           items:
-            $ref: '#/components/schemas/GroupSummary'
+            $ref: "#/components/schemas/GroupSummary"
 
     GroupSummary:
       type: object
@@ -2227,7 +2236,7 @@ components:
         criteria:
           type: array
           items:
-            $ref: '#/components/schemas/CriterionInput'
+            $ref: "#/components/schemas/CriterionInput"
 
     UpdateAssignmentRequest:
       type: object
@@ -2267,7 +2276,7 @@ components:
         criteria:
           type: array
           items:
-            $ref: '#/components/schemas/CriterionInput'
+            $ref: "#/components/schemas/CriterionInput"
 
     AssignmentSummary:
       type: object
@@ -2425,7 +2434,7 @@ components:
         criteria:
           type: array
           items:
-            $ref: '#/components/schemas/CriterionDetail'
+            $ref: "#/components/schemas/CriterionDetail"
         created_by:
           type: string
           format: uuid
@@ -2613,7 +2622,7 @@ components:
         choice:
           type: integer
           nullable: true
-          description: 'Selected forced-choice value: 1 (Left strong), 2 (Left moderate), 3 (Left slight), 4 (Right slight), 5 (Right moderate), 6 (Right strong).'
+          description: "Selected forced-choice value: 1 (Left strong), 2 (Left moderate), 3 (Left slight), 4 (Right slight), 5 (Right moderate), 6 (Right strong)."
           example: 2
         status:
           type: string
@@ -2666,7 +2675,7 @@ components:
         pairs:
           type: array
           items:
-            $ref: '#/components/schemas/EvaluationItemView'
+            $ref: "#/components/schemas/EvaluationItemView"
 
     AutosaveComparisonRequest:
       type: object
@@ -2956,7 +2965,7 @@ components:
         criteria_scores:
           type: array
           items:
-            $ref: '#/components/schemas/GroupCriterionScoreItem'
+            $ref: "#/components/schemas/GroupCriterionScoreItem"
 
     GroupSummaryReportResponse:
       type: object
@@ -2980,7 +2989,7 @@ components:
         groups:
           type: array
           items:
-            $ref: '#/components/schemas/GroupScoreRow'
+            $ref: "#/components/schemas/GroupScoreRow"
 
     IndividualScoreRow:
       type: object
@@ -3004,7 +3013,7 @@ components:
           example: a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d
         student_id:
           type: string
-          example: '66010001'
+          example: "66010001"
         display_name:
           type: string
           example: Somchai Anan
@@ -3073,7 +3082,7 @@ components:
         students:
           type: array
           items:
-            $ref: '#/components/schemas/IndividualScoreRow'
+            $ref: "#/components/schemas/IndividualScoreRow"
         distribution_histogram:
           type: array
           items:
@@ -3084,7 +3093,7 @@ components:
             properties:
               score_range:
                 type: string
-                example: '16.0-18.0'
+                example: "16.0-18.0"
               count:
                 type: integer
                 example: 22
@@ -3158,7 +3167,7 @@ components:
         pairs:
           type: array
           items:
-            $ref: '#/components/schemas/PairCoverageItem'
+            $ref: "#/components/schemas/PairCoverageItem"
 
     QualitySignalFlag:
       type: object
@@ -3183,10 +3192,10 @@ components:
           example: EVAL-088
         metric_value:
           type: string
-          example: '85.7% left choice'
+          example: "85.7% left choice"
         threshold:
           type: string
-          example: '> 80.0%'
+          example: "> 80.0%"
         description:
           type: string
           example: Evaluator selected left side for 85.7% of comparisons.
@@ -3217,7 +3226,7 @@ components:
         flags:
           type: array
           items:
-            $ref: '#/components/schemas/QualitySignalFlag'
+            $ref: "#/components/schemas/QualitySignalFlag"
 
     ScoreOverrideRequest:
       type: object
@@ -3391,7 +3400,7 @@ components:
         message:
           type: string
           description: Student dispute statement regarding peer evaluations.
-          example: 'My peer evaluation score does not reflect my commits in GitHub repository #42.'
+          example: "My peer evaluation score does not reflect my commits in GitHub repository #42."
 
     ResolveAppealRequest:
       type: object
@@ -3441,7 +3450,7 @@ components:
           example: Somchai Anan
         message:
           type: string
-          example: 'My peer evaluation score does not reflect my commits in GitHub repository #42.'
+          example: "My peer evaluation score does not reflect my commits in GitHub repository #42."
         status:
           type: string
           enum: [OPEN, RESOLVED, REJECTED]
@@ -3498,7 +3507,16 @@ components:
           example: Dr. Prateep (Instructor)
         action:
           type: string
-          enum: [PUBLISH, UNPUBLISH, OVERRIDE, FINALIZE, REOPEN, EXPORT_IDENTITIES, REGENERATE_PAIRS]
+          enum:
+            [
+              PUBLISH,
+              UNPUBLISH,
+              OVERRIDE,
+              FINALIZE,
+              REOPEN,
+              EXPORT_IDENTITIES,
+              REGENERATE_PAIRS,
+            ]
           example: OVERRIDE
         resource_type:
           type: string
@@ -3548,7 +3566,7 @@ components:
         events:
           type: array
           items:
-            $ref: '#/components/schemas/AuditEventItem'
+            $ref: "#/components/schemas/AuditEventItem"
 
     # ----------------------------------------
     # Notification Schemas
@@ -3613,4 +3631,4 @@ components:
         notifications:
           type: array
           items:
-            $ref: '#/components/schemas/NotificationItem'
+            $ref: "#/components/schemas/NotificationItem"
