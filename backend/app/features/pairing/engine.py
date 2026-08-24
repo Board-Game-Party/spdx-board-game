@@ -48,12 +48,12 @@ def generate_group_pairs_for_criterion(
     # Deterministic RNG derived from seed + assignment + criterion
     rng = random.Random(f"{seed}:{assignment.id}:{criterion.id}")
 
-    groups = db.query(GroupEntity).filter(GroupEntity.classroom_id == assignment.classroom_id).all()
+    groups = db.query(GroupEntity).filter(GroupEntity.classroom_id == assignment.classroom_id).order_by(GroupEntity.id).all()
     students = db.query(ClassroomMember).filter(
         ClassroomMember.classroom_id == assignment.classroom_id,
         ClassroomMember.role == "STUDENT",
         ClassroomMember.group_id.isnot(None)
-    ).all()
+    ).order_by(ClassroomMember.id).all()
 
     if len(groups) < 2 or not students:
         return []
@@ -64,38 +64,42 @@ def generate_group_pairs_for_criterion(
 
     # Generate all group pairs {a, b}
     group_pairs: List[Tuple[str, str]] = []
-    for g1, g2 in itertools.combinations([g.id for g in groups], 2):
+    group_id_list = sorted([g.id for g in groups])
+    for g1, g2 in itertools.combinations(group_id_list, 2):
         if g1 > g2:
             g1, g2 = g2, g1
         group_pairs.append((g1, g2))
 
-    # Target demand per pair
-    demand: Dict[Tuple[str, str], int] = {p: solved_R for p in group_pairs}
+    # Track coverage per pair
+    pair_coverage: Dict[Tuple[str, str], int] = {p: 0 for p in group_pairs}
+    evaluator_assignments: Dict[str, List[Tuple[str, str]]] = {s_id: [] for s_id in student_ids}
+
+    # Round-robin allocation over solved_k rounds to guarantee INV-3 balanced coverage & INV-4 balanced workload
+    for _ in range(solved_k):
+        shuffled_students = list(student_ids)
+        rng.shuffle(shuffled_students)
+
+        for evaluator_id in shuffled_students:
+            eval_group = student_group_map.get(evaluator_id)
+            # Eligible pairs: evaluator group not in pair (INV-1) and not already assigned (INV-2)
+            eligible = [
+                p for p in group_pairs
+                if eval_group not in p and p not in evaluator_assignments[evaluator_id]
+            ]
+            if not eligible:
+                continue
+
+            # Pick pair with minimal current coverage; tie-breaker deterministic RNG
+            eligible_with_weights = [(pair_coverage[p], rng.random(), p) for p in eligible]
+            eligible_with_weights.sort()
+            chosen_pair = eligible_with_weights[0][2]
+
+            evaluator_assignments[evaluator_id].append(chosen_pair)
+            pair_coverage[chosen_pair] += 1
+
     pair_assignments: List[PairAssignment] = []
-
-    # Randomize evaluator order to avoid first-group bias
-    shuffled_students = list(student_ids)
-    rng.shuffle(shuffled_students)
-
-    evaluator_assignments: Dict[str, List[Tuple[str, str]]] = {s_id: [] for s_id in shuffled_students}
-
-    for evaluator_id in shuffled_students:
-        eval_group = student_group_map.get(evaluator_id)
-        # Eligible pairs: evaluator group not in pair (INV-1) and not already assigned (INV-2)
-        eligible = [
-            p for p in group_pairs
-            if eval_group not in p and p not in evaluator_assignments[evaluator_id]
-        ]
-
-        # Prioritize pairs with highest unmet demand (balanced coverage INV-3)
-        # Secondary sort key: deterministic random float for tie-breaking
-        eligible.sort(key=lambda p: (-demand[p], rng.random()))
-        chosen_pairs = eligible[:solved_k]
-
-        for p in chosen_pairs:
-            evaluator_assignments[evaluator_id].append(p)
-            demand[p] -= 1
-
+    for evaluator_id in student_ids:
+        for p in evaluator_assignments[evaluator_id]:
             # FR-PAIR-08 / D8: Randomized left/right item presentation
             left_item = p[0] if rng.random() < 0.5 else p[1]
 
