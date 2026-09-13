@@ -76,6 +76,9 @@ Run the entire application (Backend + Frontend + Database) with a **single comma
 ```bash
 # Start all services with hot-reload
 docker compose up
+
+# (Optional) In another terminal, seed SE101 demo classroom & test accounts
+docker compose exec api python3 -m backend.scripts.seed_demo_data
 ```
 
 - **Frontend Web Application**: [http://localhost:5173](http://localhost:5173)
@@ -150,6 +153,16 @@ npm run lint
 
 ## 🔄 Demo Helper Scripts
 
+### With Docker
+```bash
+# Seed SE101 classroom with teacher, TA, and 4 student groups
+docker compose exec api python3 -m backend.scripts.seed_demo_data
+
+# Reset demo assignment back to clean DRAFT status (1-second reset)
+docker compose exec api python3 -m backend.scripts.reset_demo
+```
+
+### Local Development (Without Docker)
 ```bash
 # Seed SE101 classroom with teacher, TA, and 4 student groups
 python3 -m backend.scripts.seed_demo_data
@@ -164,11 +177,10 @@ python3 -m backend.scripts.reset_demo
 
 | Document | Description |
 | :--- | :--- |
-| [`docs/DOCKER_EXPLANATION_FOR_STUDENTS.md`](docs/DOCKER_EXPLANATION_FOR_STUDENTS.md) | คู่มือ Docker ฉบับเข้าใจง่าย & แนวคำถาม-คำตอบกับอาจารย์ (Teacher Q&A) |
-| [`docs/DOCKER_ENGINEERING_GUIDE.md`](docs/DOCKER_ENGINEERING_GUIDE.md) | Software Engineering Deep Dive on Multi-stage, Caching & Ephemeral Loops |
 | [`docs/setup-steps.md`](docs/setup-steps.md) | Before vs After Environment Loop Comparison Table |
-| [`docs/AUTH_AND_EVALUATION_WORKFLOW.md`](docs/AUTH_AND_EVALUATION_WORKFLOW.md) | สรุปการทำงาน Authentication & Pairwise Evaluation Workflow |
-| [`docs/USERS_AND_AUTH_GUIDE.md`](docs/USERS_AND_AUTH_GUIDE.md) | รายชื่อบัญชีผู้ใช้ในระบบ SE101 และโครงสร้าง Database |
+| [`docs/architecture.md`](docs/architecture.md) | System Architecture & Modular Feature Packages |
+| [`docs/erd.md`](docs/erd.md) | Entity Relationship Diagram & Database Schema |
+| [`docs/openapi.yaml`](docs/openapi.yaml) | Full OpenAPI 3.0 REST Specification |
 | [`docs/user-story.md`](docs/user-story.md) | Complete User Stories & Acceptance Criteria |
 
 ---
