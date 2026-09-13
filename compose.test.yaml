@@ -24,4 +24,4 @@ services:
     depends_on:
       test-db:
         condition: service_healthy
-    command: sh -c "python3 -m pytest -v && npm --prefix frontend run test"
+    command: python3 -m pytest -v

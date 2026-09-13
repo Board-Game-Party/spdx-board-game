@@ -1,10 +1,10 @@
 # ==============================================================================
-# Multi-Stage Dockerfile for PairEval (FastAPI Backend + React Frontend)
+# Multi-Stage Dockerfile for PairEval (FastAPI Backend)
 # Stages: deps -> build -> test -> runtime
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# Stage 1: deps (Install Python backend & Node frontend dependencies)
+# Stage 1: deps (Install Python dependencies with layer caching)
 # ------------------------------------------------------------------------------
 # Pin base image with explicit version tag to prevent unpredictable updates (never use :latest)
 FROM python:3.12-slim AS deps
@@ -12,23 +12,15 @@ FROM python:3.12-slim AS deps
 # Set working directory inside container
 WORKDIR /app
 
-# Install system utilities (curl for healthcheck and Node.js for frontend toolchain)
-RUN apt-get update && apt-get install -y --no-install-recommends curl nodejs npm && rm -rf /var/lib/apt/lists/*
-
-# Copy dependency manifests first to leverage Docker layer caching
+# Copy dependency manifest first to leverage Docker layer caching
 COPY requirements.txt ./
-COPY package.json ./
-COPY frontend/package.json frontend/package-lock.json* ./frontend/
 
 # Install Python backend dependencies without caching wheel files to reduce image size
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Node.js frontend dependencies using clean reproducible install
-RUN npm --prefix frontend ci
-
 
 # ------------------------------------------------------------------------------
-# Stage 2: build (Compile TypeScript & bundle React frontend assets)
+# Stage 2: build (Assemble application source code and configurations)
 # ------------------------------------------------------------------------------
 # Inherit installed dependencies from deps stage
 FROM deps AS build
@@ -36,17 +28,14 @@ FROM deps AS build
 # Set working directory
 WORKDIR /app
 
-# Copy full source code into build stage
+# Copy full application source code into build stage
 COPY . .
 
-# Build static React frontend production bundle into frontend/dist
-RUN npm --prefix frontend run build
-
 
 # ------------------------------------------------------------------------------
-# Stage 3: test (Run automated Pytest backend and Vitest frontend test suites)
+# Stage 3: test (Run automated Pytest test suite)
 # ------------------------------------------------------------------------------
-# Inherit built app and full development tooling from build stage
+# Inherit built app and development tooling from build stage
 FROM build AS test
 
 # Set working directory
@@ -56,8 +45,8 @@ WORKDIR /app
 ENV NODE_ENV=test
 ENV PYTHONUNBUFFERED=1
 
-# Run both Backend Pytest and Frontend Vitest suites (fails stage if tests fail)
-CMD ["sh", "-c", "python3 -m pytest -v && npm --prefix frontend run test"]
+# Run backend Pytest test suite (propagates non-zero exit code on failure)
+CMD ["python3", "-m", "pytest", "-v"]
 
 
 # ------------------------------------------------------------------------------
@@ -77,7 +66,7 @@ ENV ENVIRONMENT=production
 # Install curl for container health check
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
-# Create dedicated non-root user and group for security compliance
+# Create dedicated non-root user and group for security compliance (Principle of Least Privilege)
 RUN groupadd -g 1001 appgroup && useradd -u 1001 -g appgroup -s /bin/bash -m appuser
 
 # Copy installed Python packages from deps stage
@@ -86,9 +75,6 @@ COPY --from=deps /usr/local/bin /usr/local/bin
 
 # Copy backend application source code
 COPY backend ./backend
-
-# Copy compiled frontend production assets from build stage
-COPY --from=build /app/frontend/dist ./frontend/dist
 
 # Set file ownership to non-root user
 RUN chown -R appuser:appgroup /app

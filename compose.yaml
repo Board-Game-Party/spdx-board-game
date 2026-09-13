@@ -1,11 +1,10 @@
 services:
-  app:
+  api:
     build:
       context: .
       target: build
     ports:
       - "8000:8000"
-      - "5173:5173"
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/paireval}
       PROJECT_NAME: PairEval
@@ -14,12 +13,25 @@ services:
       ALLOWED_ORIGINS: http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173
       NODE_ENV: development
     volumes:
-      - .:/app
-      - /app/frontend/node_modules
-    command: sh -c "python3 -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload & npm --prefix frontend run dev -- --host 0.0.0.0"
+      - ./backend:/app/backend
+    command: python3 -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
     depends_on:
       db:
         condition: service_healthy
+
+  web:
+    image: node:22-alpine
+    working_dir: /app/frontend
+    ports:
+      - "5173:5173"
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./frontend:/app/frontend
+      - /app/frontend/node_modules
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    depends_on:
+      - api
 
   db:
     image: postgres:17-alpine
