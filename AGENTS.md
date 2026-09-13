@@ -6,11 +6,13 @@
 
 ## Setup & Commands
 
-- install: `npm ci`            (หรือ `pip install -r requirements.txt`)
-- dev:     `npm run dev`
-- test:    `npm test`
-- lint:    `npm run lint`
-- build:   `npm run build`
+- dev:        `docker compose up`
+- test:       `docker compose -f compose.test.yaml up unit --abort-on-container-exit --exit-code-from unit`
+- teardown:   `docker compose -f compose.test.yaml down -v`
+- local dev:  `npm run dev`
+- local test: `npm test`
+- lint:       `npm run lint`
+- build:      `npm run build`
 
 ## Conventions
 

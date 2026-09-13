@@ -1,0 +1,41 @@
+services:
+  app:
+    build:
+      context: .
+      target: build
+    ports:
+      - "8000:8000"
+      - "5173:5173"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/paireval}
+      PROJECT_NAME: PairEval
+      API_V1_STR: /api
+      SECRET_KEY: dev-secret-key-change-in-production
+      ALLOWED_ORIGINS: http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173
+      NODE_ENV: development
+    volumes:
+      - .:/app
+      - /app/frontend/node_modules
+    command: sh -c "python3 -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload & npm --prefix frontend run dev -- --host 0.0.0.0"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: paireval
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d paireval"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
