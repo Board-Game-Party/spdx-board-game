@@ -1,6 +1,7 @@
 # PairEval — Campus Pairwise Evaluation Service
 
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](#testing--verification)
+[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](#-testing--quality-assurance)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)](#-quick-start-with-docker-recommended)
 [![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/react-18.3-61dafb.svg)](https://react.dev/)
@@ -68,155 +69,142 @@
 
 ---
 
-## 📁 Repository Structure
+## ⚡ Quick Start with Docker (Recommended)
 
-```text
-.
-├── backend/
-│   ├── app/
-│   │   ├── core/           # Configuration, database connection, security & auth middleware
-│   │   ├── features/       # Modular feature domain packages
-│   │   │   ├── assignment/ # Assignment creation, criteria & weights
-│   │   │   ├── audit/      # Append-only audit logs & student grade appeals
-│   │   │   ├── auth/       # Authentication, user profiles & domain restriction
-│   │   │   ├── classroom/  # Classroom management & CSV roster import
-│   │   │   ├── evaluation/ # Pairwise evaluation worksheets & draft autosave
-│   │   │   ├── integrity/  # Intransitive 3-cycles, straight-lining & bias detector
-│   │   │   ├── notification/# Notification and alert management
-│   │   │   ├── pairing/    # Pairing engine & feasibility solver
-│   │   │   ├── reporting/  # Export reports (CSV/XLSX) & k-anonymity score views
-│   │   │   └── scoring/    # Pure function scoring engine & quality indices
-│   │   ├── shared/         # Shared SQLAlchemy ORM models & base entities
-│   │   └── main.py         # FastAPI application entrypoint & routing table
-│   ├── tests/              # Backend test suite (E2E, pairing, scoring, security)
-│   └── requirements.txt    # Python dependencies
-├── frontend/
-│   ├── src/
-│   │   ├── app/            # AuthContext and application providers
-│   │   ├── components/     # Reusable UI components (Navbar, Toast, Badges)
-│   │   ├── features/       # Feature views (Classrooms, Assignments, Worksheet, Reports, Audit)
-│   │   ├── lib/            # API clients, local offline storage & utilities
-│   │   ├── tests/          # Component & interaction test suites (Vitest)
-│   │   ├── App.tsx         # Main application layout and view router
-│   │   └── main.tsx        # React root mount
-│   ├── package.json        # Frontend dependencies and scripts
-│   ├── tailwind.config.js  # Tailwind CSS styling configuration
-│   └── vite.config.ts      # Vite configuration & Vitest test setup
-├── docs/                   # Architecture diagrams, ERD, OpenAPI specifications, user stories
-├── memory-bank/            # Project memory bank, architectural standards, and unit specs
-├── requirements.txt        # Root Python dependencies
-├── package.json            # Root workspace scripts
-└── pytest.ini              # Pytest configuration
+Run the entire application (Backend + Frontend + Database) with a **single command**:
+
+```bash
+# Start all services with hot-reload
+docker compose up
+```
+
+- **Frontend Web Application**: [http://localhost:5173](http://localhost:5173)
+- **Backend API Gateway**: [http://localhost:8000](http://localhost:8000)
+- **Interactive Swagger Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **ReDoc Documentation**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
+
+### Run Tests in Ephemeral RAM Database
+```bash
+# Runs test suite against ephemeral tmpfs database and exits cleanly
+docker compose -f compose.test.yaml up unit --abort-on-container-exit --exit-code-from unit
+```
+
+### Stop & Teardown Containers
+```bash
+docker compose down -v
 ```
 
 ---
 
-## 🛠️ Prerequisites & Setup
+## 💻 Local Development (Without Docker)
 
-### Prerequisites
-- **Node.js**: v18.0.0 or later
+### 1. Prerequisites
 - **Python**: v3.12 or later
-- **npm** or **pnpm / yarn**
+- **Node.js**: v18.0.0 or later (with npm)
 
-### 1. Installation
-
-Install frontend and backend dependencies:
-
+### 2. Installation
 ```bash
-# Install frontend dependencies
-npm --prefix frontend install
-
 # Install backend dependencies
 pip install -r requirements.txt
+
+# Install frontend dependencies
+npm --prefix frontend install
 ```
 
-### 2. Environment Configuration
-
-Create a `.env` file in the root directory (optional for default SQLite dev mode):
-
-```env
-PROJECT_NAME="PairEval"
-API_V1_STR="/api"
-SECRET_KEY="your-production-secret-key"
-DATABASE_URL="sqlite:///./paireval.db"
-ALLOWED_ORIGINS="http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173"
-```
-
----
-
-## 💻 Running the Application
-
-### Running Frontend
+### 3. Seed Demo Data & Start Services
 ```bash
-# From repository root
+# Seed SE101 demo classroom and test accounts
+python3 -m backend.scripts.seed_demo_data
+
+# Start backend server
+python3 -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+
+# Start frontend development server
 npm run dev
-
-# Or directly from frontend directory
-cd frontend && npm run dev
 ```
-The frontend will be available at `http://localhost:5173`.
-
-### Running Backend API
-```bash
-# Start FastAPI server with live reload
-uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
-```
-- **Interactive Swagger API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
-- **ReDoc Documentation**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
 
 ---
 
 ## 🧪 Testing & Quality Assurance
 
-Run the unified test suite across both frontend and backend:
+Run the unified test suite across both frontend (Vitest) and backend (Pytest):
 
 ```bash
-# Run both Backend Pytest and Frontend Vitest suites
+# Run unified test suite
 npm test
 ```
 
-### Run Backend Tests Only
+### Run Specific Test Suites
 ```bash
+# Backend pytest suite only
 python3 -m pytest -v
-```
 
-### Run Frontend Tests Only
-```bash
+# Frontend vitest suite only
 npm --prefix frontend run test
-```
 
-### Type Checking & Linting
-```bash
+# Type checking & linting
 npm run lint
 ```
 
 ---
 
-## 📖 API Documentation & Reference
+## 🔄 Demo Helper Scripts
 
-The API surface adheres to OpenAPI 3.1 standards. Detailed API documentation is available at `docs/openapi.yaml` and live at `/docs`.
+```bash
+# Seed SE101 classroom with teacher, TA, and 4 student groups
+python3 -m backend.scripts.seed_demo_data
 
-Key API endpoints include:
-- `POST /api/auth/login` — Authentication & session creation
-- `GET /api/classrooms` — List enrolled classrooms
-- `POST /api/classrooms/{id}/roster/import` — CSV roster atomic import
-- `POST /api/assignments/{id}/publish` — Assignment feasibility check & pairing generation
-- `GET /api/evaluations/assignment/{id}/worksheet` — Student pairwise evaluation worksheet
-- `POST /api/evaluations/submit` — Submit pairwise comparison ratings
-- `GET /api/reports/assignment/{id}/student-scores` — Privacy-guarded student scores ($k \ge 3$)
-- `GET /api/audit/assignment/{id}` — Append-only audit trail logs
+# Reset demo assignment back to clean DRAFT status (1-second reset)
+python3 -m backend.scripts.reset_demo
+```
 
 ---
 
-## 🤝 Conventions & Contribution
+## 📖 Documentation & Guides
 
-- **Commits**: Follow [Conventional Commits](https://www.conventionalcommits.org/) format (`feat:`, `fix:`, `docs:`, `test:`, `refactor:`).
-- **Branching**: Develop on `feature/<feature-name>` branches and submit PRs to `develop`.
-- **Accessibility & Testing**: Use semantic HTML and `data-testid` attributes for interactive elements.
-- **TDD / Verification**: Ensure all tests pass (`npm test` & `npm run lint`) before submitting code changes.
+| Document | Description |
+| :--- | :--- |
+| [`docs/DOCKER_EXPLANATION_FOR_STUDENTS.md`](docs/DOCKER_EXPLANATION_FOR_STUDENTS.md) | คู่มือ Docker ฉบับเข้าใจง่าย & แนวคำถาม-คำตอบกับอาจารย์ (Teacher Q&A) |
+| [`docs/DOCKER_ENGINEERING_GUIDE.md`](docs/DOCKER_ENGINEERING_GUIDE.md) | Software Engineering Deep Dive on Multi-stage, Caching & Ephemeral Loops |
+| [`docs/setup-steps.md`](docs/setup-steps.md) | Before vs After Environment Loop Comparison Table |
+| [`docs/AUTH_AND_EVALUATION_WORKFLOW.md`](docs/AUTH_AND_EVALUATION_WORKFLOW.md) | สรุปการทำงาน Authentication & Pairwise Evaluation Workflow |
+| [`docs/USERS_AND_AUTH_GUIDE.md`](docs/USERS_AND_AUTH_GUIDE.md) | รายชื่อบัญชีผู้ใช้ในระบบ SE101 และโครงสร้าง Database |
+| [`docs/user-story.md`](docs/user-story.md) | Complete User Stories & Acceptance Criteria |
+
+---
+
+## 📁 Repository Structure
+
+```text
+.
+├── Dockerfile              # Multi-stage container build (deps -> build -> test -> runtime)
+├── .dockerignore           # Container build exclusion rules
+├── compose.yaml            # Single-command dev environment with hot-reload
+├── compose.test.yaml       # Ephemeral RAM test environment (tmpfs)
+├── AGENTS.md               # Agent instructions & development loop rules
+├── backend/
+│   ├── app/
+│   │   ├── core/           # Config, database connection, security & auth middleware
+│   │   ├── features/       # Modular feature domain packages (auth, classroom, assignment, pairing, evaluation, scoring)
+│   │   ├── shared/         # SQLAlchemy ORM models & database base entities
+│   │   └── main.py         # FastAPI application entrypoint & routing table
+│   ├── scripts/            # Demo seeding (seed_demo_data.py) & reset (reset_demo.py)
+│   ├── tests/              # Backend test suite (E2E, pairing invariants, golden scoring)
+│   └── requirements.txt    # Python dependencies
+├── frontend/
+│   ├── src/
+│   │   ├── app/            # AuthContext and application state providers
+│   │   ├── features/       # Feature views (GoogleOAuthModal, Classrooms, Assignments, Worksheet, Reports)
+│   │   ├── components/     # Reusable UI components
+│   │   └── tests/          # Frontend Vitest test suite
+│   ├── package.json        # Frontend dependencies and scripts
+│   └── vite.config.ts      # Vite configuration & Vitest setup
+├── docs/                   # Architectural guides, user stories, OpenAPI specs, and lab docs
+└── package.json            # Root workspace scripts (npm test, dev, lint, build)
+```
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License — see the repository files for details.
+This project is licensed under the MIT License — see repository files for details.
