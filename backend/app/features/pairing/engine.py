@@ -70,32 +70,36 @@ def generate_group_pairs_for_criterion(
             g1, g2 = g2, g1
         group_pairs.append((g1, g2))
 
+    # Group students by their group_id
+    students_by_group: Dict[str, List[str]] = {}
+    for s in students:
+        students_by_group.setdefault(s.group_id, []).append(s.user_id)
+
+    # Sort students in each group for deterministic allocation (INV-5)
+    for g_id in students_by_group:
+        students_by_group[g_id].sort()
+
     # Track coverage per pair
     pair_coverage: Dict[Tuple[str, str], int] = {p: 0 for p in group_pairs}
     evaluator_assignments: Dict[str, List[Tuple[str, str]]] = {s_id: [] for s_id in student_ids}
 
-    # Round-robin allocation over solved_k rounds to guarantee INV-3 balanced coverage & INV-4 balanced workload
-    for _ in range(solved_k):
-        shuffled_students = list(student_ids)
-        rng.shuffle(shuffled_students)
+    # Allocate pairs cyclically per group to guarantee INV-1, INV-2, INV-3 and INV-4
+    for g_idx, (g_id, member_ids) in enumerate(sorted(students_by_group.items())):
+        # Eligible pairs for this group (INV-1: group not in pair)
+        group_eligible = [p for p in group_pairs if g_id not in p]
+        if not group_eligible:
+            continue
+        num_eligible = len(group_eligible)
 
-        for evaluator_id in shuffled_students:
-            eval_group = student_group_map.get(evaluator_id)
-            # Eligible pairs: evaluator group not in pair (INV-1) and not already assigned (INV-2)
-            eligible = [
-                p for p in group_pairs
-                if eval_group not in p and p not in evaluator_assignments[evaluator_id]
-            ]
-            if not eligible:
-                continue
-
-            # Pick pair with minimal current coverage; tie-breaker deterministic RNG
-            eligible_with_weights = [(pair_coverage[p], rng.random(), p) for p in eligible]
-            eligible_with_weights.sort()
-            chosen_pair = eligible_with_weights[0][2]
-
-            evaluator_assignments[evaluator_id].append(chosen_pair)
-            pair_coverage[chosen_pair] += 1
+        for s_idx, eval_user_id in enumerate(member_ids):
+            for r in range(solved_k):
+                if r >= num_eligible:
+                    break
+                # Cyclic shift per member index and group index ensures even distribution across all pairs
+                pair_idx = (g_idx + s_idx + r) % num_eligible
+                chosen_pair = group_eligible[pair_idx]
+                evaluator_assignments[eval_user_id].append(chosen_pair)
+                pair_coverage[chosen_pair] += 1
 
     pair_assignments: List[PairAssignment] = []
     for evaluator_id in student_ids:
