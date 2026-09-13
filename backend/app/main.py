@@ -18,8 +18,17 @@ from backend.app.features.notification.router import router as notification_rout
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize database tables
-    Base.metadata.create_all(bind=engine)
+    # Initialize database tables with retries for container readiness
+    import time
+    max_retries = 10
+    for attempt in range(1, max_retries + 1):
+        try:
+            Base.metadata.create_all(bind=engine)
+            break
+        except Exception as e:
+            if attempt == max_retries:
+                raise e
+            time.sleep(1)
     yield
 
 app = FastAPI(

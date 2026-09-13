@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Eye, EyeOff, X, Loader2, Info, ChevronDown, ChevronUp, Users, Shield, GraduationCap } from 'lucide-react';
+import { User, Eye, EyeOff, X, Loader2, ChevronDown, ChevronUp, Users, Shield, GraduationCap } from 'lucide-react';
 
 interface GoogleOAuthModalProps {
   isOpen: boolean;
