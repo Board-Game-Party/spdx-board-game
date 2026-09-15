@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from './app/AuthContext';
 import { LoginView } from './features/auth/LoginView';
 import { Navbar } from './components/Navbar';
@@ -22,6 +22,14 @@ export const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<string>('classrooms');
   const [selectedClassroomId, setSelectedClassroomId] = useState<string | null>(null);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      setCurrentView('classrooms');
+      setSelectedClassroomId(null);
+      setSelectedAssignmentId(null);
+    }
+  }, [user]);
 
   if (isLoading) {
     return (
@@ -102,6 +110,7 @@ export const App: React.FC = () => {
         {/* 5. Student Evaluation Worksheet */}
         {currentView === 'evaluation' && selectedAssignmentId && (
           <EvaluationWorksheetView
+            key={`${user?.id}-${selectedAssignmentId}`}
             assignmentId={selectedAssignmentId}
             onBack={() => setCurrentView('assignment-detail')}
           />

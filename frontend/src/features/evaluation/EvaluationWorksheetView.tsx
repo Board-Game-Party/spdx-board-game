@@ -81,7 +81,7 @@ export const EvaluationWorksheetView: React.FC<EvaluationWorksheetViewProps> = (
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { saveStatus, lastSavedTime, triggerAutosave } = useAutosave(1200);
+  const { saveStatus, lastSavedTime, triggerAutosave, flushDrafts } = useAutosave(1200);
   useComparisonQueue(() => loadWorksheet());
 
   const loadWorksheet = async () => {
@@ -103,6 +103,8 @@ export const EvaluationWorksheetView: React.FC<EvaluationWorksheetViewProps> = (
       setChoices(initialChoices);
     } catch (err: any) {
       setError(err.message || 'Failed to load evaluation worksheet');
+      setWorksheet(null);
+      setChoices({});
     } finally {
       setIsLoading(false);
     }
@@ -117,6 +119,12 @@ export const EvaluationWorksheetView: React.FC<EvaluationWorksheetViewProps> = (
     triggerAutosave(pairId, choiceVal, 3000);
   };
 
+  const handleSideChange = async (newSide: 'GROUP' | 'INDIVIDUAL') => {
+    if (newSide === side) return;
+    await flushDrafts();
+    setSide(newSide);
+  };
+
   const answeredCount = Object.keys(choices).length;
   const totalCount = worksheet?.total_comparisons || 0;
   const unansweredCount = Math.max(0, totalCount - answeredCount);
@@ -127,6 +135,7 @@ export const EvaluationWorksheetView: React.FC<EvaluationWorksheetViewProps> = (
     : false;
 
   const handleSubmit = async (confirmIncomplete: boolean = false) => {
+    await flushDrafts();
     setIsSubmitting(true);
     setError(null);
     try {
@@ -182,7 +191,7 @@ export const EvaluationWorksheetView: React.FC<EvaluationWorksheetViewProps> = (
       {/* Side Toggle: Group vs Individual */}
       <div className="flex bg-slate-100 p-1 rounded-xl w-fit text-xs font-semibold">
         <button
-          onClick={() => setSide('GROUP')}
+          onClick={() => handleSideChange('GROUP')}
           className={`px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 ${
             side === 'GROUP' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
           }`}
@@ -192,7 +201,7 @@ export const EvaluationWorksheetView: React.FC<EvaluationWorksheetViewProps> = (
         </button>
 
         <button
-          onClick={() => setSide('INDIVIDUAL')}
+          onClick={() => handleSideChange('INDIVIDUAL')}
           className={`px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 ${
             side === 'INDIVIDUAL' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
           }`}

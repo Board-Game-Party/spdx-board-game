@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useAuth } from '../app/AuthContext';
 import { Bell, LogOut, Layers } from 'lucide-react';
 import { formatDate } from '../lib/utils';
+import { Modal } from './Modal';
+import { Button } from './Button';
 
 export interface NavbarProps {
   currentView: string;
@@ -11,6 +13,7 @@ export interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
   const { user, activeClassroom, setActiveClassroom, notifications, unreadNotificationCount, markNotificationRead, logout } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   const isInstructor = activeClassroom?.role === 'OWNER' || activeClassroom?.role === 'CO_TEACHER';
   const isTA = activeClassroom?.role === 'TA';
@@ -149,9 +152,10 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
                 {user?.display_name || user?.email_raw}
               </span>
               <button
-                onClick={logout}
-                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                onClick={() => setIsLogoutConfirmOpen(true)}
+                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                 title="ออกจากระบบ"
+                data-testid="logout-btn"
               >
                 <LogOut className="h-5 w-5" />
               </button>
@@ -159,6 +163,38 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
           </div>
         </div>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      <Modal
+        isOpen={isLogoutConfirmOpen}
+        onClose={() => setIsLogoutConfirmOpen(false)}
+        title="ยืนยันการออกจากระบบ"
+      >
+        <div className="space-y-4 text-sm">
+          <p className="text-slate-600">
+            คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบ? ข้อมูลการประเมินที่บันทึกแล้วจะยังคงอยู่ แต่ข้อที่ยังไม่ได้ตอบหรือกำลังส่งอาจไม่สมบูรณ์
+          </p>
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+            <Button
+              variant="outline"
+              onClick={() => setIsLogoutConfirmOpen(false)}
+              data-testid="cancel-logout-btn"
+            >
+              ยกเลิก
+            </Button>
+            <Button
+              variant="danger"
+              data-testid="confirm-logout-btn"
+              onClick={() => {
+                setIsLogoutConfirmOpen(false);
+                logout();
+              }}
+            >
+              ออกจากระบบ
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </header>
   );
 };

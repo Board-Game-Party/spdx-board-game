@@ -29,7 +29,7 @@ export interface NotificationItem {
   read_at?: string;
 }
 
-interface AuthContextType {
+export interface AuthContextType {
   user: UserProfile | null;
   activeClassroom: Membership | null;
   notifications: NotificationItem[];
@@ -43,7 +43,7 @@ interface AuthContextType {
   markNotificationRead: (id: string) => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -113,6 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     localStorage.removeItem('paireval_token');
+    localStorage.removeItem('paireval_offline_queue');
     setUser(null);
     setActiveClassroom(null);
     setNotifications([]);

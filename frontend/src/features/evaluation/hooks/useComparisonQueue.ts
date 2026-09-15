@@ -23,6 +23,9 @@ export function useComparisonQueue(onSynced?: () => void) {
   }, [onSynced]);
 
   useEffect(() => {
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      syncOfflineQueue();
+    }
     window.addEventListener('online', syncOfflineQueue);
     return () => window.removeEventListener('online', syncOfflineQueue);
   }, [syncOfflineQueue]);
