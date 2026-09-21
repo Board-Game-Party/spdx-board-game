@@ -77,12 +77,15 @@ def seed_database():
             ClassroomMember.user_id == ta.id
         ).first()
         if not m_ta:
-            db.add(ClassroomMember(
+            m_ta = ClassroomMember(
                 id=str(uuid.uuid4()),
                 classroom_id=classroom.id,
                 user_id=ta.id,
                 role="TA"
-            ))
+            )
+            db.add(m_ta)
+        else:
+            m_ta.role = "TA"
 
         # 5. Create Student Groups
         group_names = ["Group Alpha (Aurora)", "Group Beta (Blaze)", "Group Gamma (Cosmos)", "Group Delta (Dynamo)"]

@@ -10,6 +10,7 @@ export interface Membership {
   group_id?: string;
   group_name?: string;
   student_id?: string;
+  status?: string;
 }
 
 export interface UserProfile {

@@ -10,7 +10,8 @@ from backend.app.core.security import normalize_email
 from backend.app.shared.models import User, Classroom, ClassroomMember, GroupEntity
 from backend.app.features.classroom.schemas import (
     CreateClassroomRequest, UpdateClassroomRequest, ClassroomDetail, ClassroomSummary,
-    ClassroomMemberOut, GroupSummary, AddMemberRequest, RosterImportResult, RosterDiffItem
+    ClassroomMemberOut, GroupSummary, AddMemberRequest, UpdateMemberRequest,
+    RosterImportResult, RosterDiffItem
 )
 
 EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -205,6 +206,57 @@ def add_classroom_member(db: Session, classroom: Classroom, req: AddMemberReques
         user_status=user.status,
         joined_at=member.joined_at
     )
+
+def update_classroom_member(
+    db: Session,
+    classroom: Classroom,
+    member_id: str,
+    payload: UpdateMemberRequest
+) -> ClassroomMember:
+    member = db.query(ClassroomMember).filter(
+        ClassroomMember.id == member_id,
+        ClassroomMember.classroom_id == classroom.id
+    ).first()
+    if not member:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
+
+    if payload.role is not None:
+        if payload.role not in {"OWNER", "CO_TEACHER", "TA", "STUDENT"}:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid role")
+        if member.role == "OWNER" and payload.role != "OWNER":
+            owner_count = db.query(ClassroomMember).filter(
+                ClassroomMember.classroom_id == classroom.id,
+                ClassroomMember.role == "OWNER"
+            ).count()
+            if owner_count <= 1:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Cannot demote the last remaining Owner from the classroom"
+                )
+        member.role = payload.role
+
+    if payload.student_id is not None:
+        member.student_id = sanitize_csv_cell(payload.student_id) if payload.student_id.strip() else None
+
+    if payload.group_name is not None:
+        raw_grp = payload.group_name.strip()
+        if not raw_grp:
+            member.group_id = None
+        else:
+            sanitized_grp = sanitize_csv_cell(raw_grp)
+            grp = db.query(GroupEntity).filter(
+                GroupEntity.classroom_id == classroom.id,
+                GroupEntity.name == sanitized_grp
+            ).first()
+            if not grp:
+                grp = GroupEntity(classroom_id=classroom.id, name=sanitized_grp)
+                db.add(grp)
+                db.flush()
+            member.group_id = grp.id
+
+    db.commit()
+    db.refresh(member)
+    return member
 
 def remove_classroom_member(db: Session, classroom: Classroom, member_id: str):
     member = db.query(ClassroomMember).filter(

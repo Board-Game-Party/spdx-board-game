@@ -106,8 +106,9 @@ export const RosterImportModal: React.FC<RosterImportModalProps> = ({
 
         {/* File input */}
         <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">เลือกไฟล์ CSV</label>
+          <label htmlFor="csv-file-input" className="block text-xs font-semibold text-slate-700 mb-1">เลือกไฟล์ CSV</label>
           <input
+            id="csv-file-input"
             type="file"
             accept=".csv"
             onChange={(e) => {
