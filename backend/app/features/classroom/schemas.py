@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Literal
 from datetime import datetime
 
 class CreateClassroomRequest(BaseModel):
@@ -12,7 +12,7 @@ class UpdateClassroomRequest(BaseModel):
     name: Optional[str] = None
     timezone: Optional[str] = None
     allowed_email_domains: Optional[List[str]] = None
-    status: Optional[str] = None  # ACTIVE | ARCHIVED
+    status: Optional[Literal["ACTIVE", "ARCHIVED"]] = None
 
 class GroupSummary(BaseModel):
     id: str
@@ -57,10 +57,15 @@ class ClassroomDetail(BaseModel):
 
 class AddMemberRequest(BaseModel):
     email: str
-    role: str  # CO_TEACHER | TA | STUDENT
+    role: Literal["CO_TEACHER", "TA", "STUDENT"]
     display_name: Optional[str] = None
     student_id: Optional[str] = None
     group_name: Optional[str] = None
+
+class UpdateMemberRequest(BaseModel):
+    role: Optional[Literal["OWNER", "CO_TEACHER", "TA", "STUDENT"]] = None
+    group_name: Optional[str] = None
+    student_id: Optional[str] = None
 
 class RosterDiffItem(BaseModel):
     email: str
