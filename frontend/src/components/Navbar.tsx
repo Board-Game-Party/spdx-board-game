@@ -72,7 +72,12 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
                 value={activeClassroom?.id || ''}
                 onChange={(e) => {
                   const selected = user.memberships.find(m => m.id === e.target.value);
-                  if (selected) setActiveClassroom(selected);
+                  if (selected) {
+                    setActiveClassroom(selected);
+                    if (currentView !== 'classrooms') {
+                      onNavigate('classroom-detail');
+                    }
+                  }
                 }}
                 className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-700 focus:ring-1 focus:ring-brand-500"
               >
