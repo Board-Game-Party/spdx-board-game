@@ -23,6 +23,8 @@ export const App: React.FC = () => {
   const [selectedClassroomId, setSelectedClassroomId] = useState<string | null>(null);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
 
+  const effectiveClassroomId = selectedClassroomId || activeClassroom?.classroom_id;
+
   useEffect(() => {
     if (!user) {
       setCurrentView('classrooms');
@@ -30,6 +32,16 @@ export const App: React.FC = () => {
       setSelectedAssignmentId(null);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (activeClassroom?.classroom_id) {
+      setSelectedClassroomId(activeClassroom.classroom_id);
+      setSelectedAssignmentId(null);
+      if (['assignment-detail', 'assignment-create', 'evaluation', 'group-report', 'individual-report', 'coverage-report', 'quality-report', 'student-score', 'appeals'].includes(currentView)) {
+        setCurrentView('classroom-detail');
+      }
+    }
+  }, [activeClassroom?.classroom_id]);
 
   if (isLoading) {
     return (
@@ -54,6 +66,8 @@ export const App: React.FC = () => {
           if (view === 'classrooms') {
             setSelectedClassroomId(null);
             setSelectedAssignmentId(null);
+          } else if (view === 'classroom-detail' && !selectedClassroomId && activeClassroom?.classroom_id) {
+            setSelectedClassroomId(activeClassroom.classroom_id);
           }
           setCurrentView(view);
         }}
@@ -71,9 +85,9 @@ export const App: React.FC = () => {
         )}
 
         {/* 2. Classroom Detail */}
-        {currentView === 'classroom-detail' && selectedClassroomId && (
+        {currentView === 'classroom-detail' && effectiveClassroomId && (
           <ClassroomDetailView
-            classroomId={selectedClassroomId}
+            classroomId={effectiveClassroomId}
             onSelectAssignment={(aId) => {
               setSelectedAssignmentId(aId);
               setCurrentView('assignment-detail');
@@ -87,9 +101,9 @@ export const App: React.FC = () => {
         )}
 
         {/* 3. Create Assignment */}
-        {currentView === 'assignment-create' && selectedClassroomId && (
+        {currentView === 'assignment-create' && effectiveClassroomId && (
           <AssignmentSetupView
-            classroomId={selectedClassroomId}
+            classroomId={effectiveClassroomId}
             onSuccess={(aId) => {
               setSelectedAssignmentId(aId);
               setCurrentView('assignment-detail');
@@ -157,9 +171,9 @@ export const App: React.FC = () => {
         )}
 
         {/* 11. Audit Trail View */}
-        {currentView === 'audit-trail' && (selectedClassroomId || activeClassroom?.classroom_id) && (
+        {currentView === 'audit-trail' && effectiveClassroomId && (
           <AuditTrailView
-            classroomId={selectedClassroomId || activeClassroom!.classroom_id}
+            classroomId={effectiveClassroomId}
             onBack={() => setCurrentView('classroom-detail')}
           />
         )}
