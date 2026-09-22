@@ -10,9 +10,10 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "lucide-react": "^0.475.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "lucide-react": "^0.475.0"
+    "spdx-board-game": "file:.."
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",
