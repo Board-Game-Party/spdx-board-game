@@ -10,7 +10,7 @@ from backend.app.features.assignment.schemas import (
 )
 from backend.app.features.assignment.services import (
     create_assignment, update_assignment, list_assignments, get_assignment_detail,
-    unpublish_assignment, reopen_assignment
+    unpublish_assignment, reopen_assignment, delete_assignment
 )
 
 router = APIRouter(tags=["Assignments & Criteria"])
@@ -92,3 +92,18 @@ def reopen_endpoint(
     _, member = get_classroom_or_404(assignment.classroom_id, current_user, db)
     check_classroom_role(member, ["OWNER", "CO_TEACHER"])
     return reopen_assignment(db, assignment, req, current_user)
+
+@router.delete("/assignments/{assignmentId}", status_code=204)
+def delete_assignment_endpoint(
+    assignmentId: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    assignment = db.query(Assignment).filter(Assignment.id == assignmentId).first()
+    if not assignment:
+        from fastapi import HTTPException, status
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
+    _, member = get_classroom_or_404(assignment.classroom_id, current_user, db)
+    check_classroom_role(member, ["OWNER", "CO_TEACHER"])
+    delete_assignment(db, assignment)
+    return None

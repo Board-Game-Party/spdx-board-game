@@ -289,3 +289,16 @@ def get_assignment_detail(db: Session, assignment: Assignment) -> AssignmentDeta
         group_pair_count=group_pair_cnt,
         individual_pair_count=indiv_pair_cnt
     )
+
+def delete_assignment(db: Session, assignment: Assignment) -> None:
+    if assignment.status != "DRAFT":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot delete assignment in '{assignment.status}' state. Only DRAFT assignments can be deleted."
+        )
+
+    # Detach audit events to prevent FK constraint violations
+    db.query(AuditEvent).filter(AuditEvent.assignment_id == assignment.id).update({"assignment_id": None}, synchronize_session=False)
+    
+    db.delete(assignment)
+    db.commit()
