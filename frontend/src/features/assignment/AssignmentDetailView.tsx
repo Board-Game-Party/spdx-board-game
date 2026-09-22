@@ -77,6 +77,7 @@ export const AssignmentDetailView: React.FC<AssignmentDetailViewProps> = ({
   const [isUnpublishModalOpen, setIsUnpublishModalOpen] = useState(false);
   const [isReopenModalOpen, setIsReopenModalOpen] = useState(false);
   const [isFinalizeModalOpen, setIsFinalizeModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [actionReason, setActionReason] = useState('');
   const [allowLowConfidence, setAllowLowConfidence] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -200,6 +201,20 @@ export const AssignmentDetailView: React.FC<AssignmentDetailViewProps> = ({
     window.open(url, '_blank');
   };
 
+  const handleDelete = async () => {
+    setIsProcessing(true);
+    try {
+      await fetchApi(`/assignments/${assignmentId}`, { method: 'DELETE' });
+      setIsDeleteModalOpen(false);
+      window.alert('ลบงานมอบหมายสำเร็จ');
+      onBack();
+    } catch (err: any) {
+      setError(err.message || 'Delete failed');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   if (isLoading) {
     return <div className="text-center py-20 text-slate-400">กำลังโหลดข้อมูลงานมอบหมาย...</div>;
   }
@@ -274,15 +289,23 @@ export const AssignmentDetailView: React.FC<AssignmentDetailViewProps> = ({
           {isInstructor && (
             <>
               {assignment.status === 'DRAFT' && (
-                <Button
-                  variant="primary"
-                  onClick={handlePublish}
-                  isLoading={isProcessing}
-                  disabled={Boolean(feasibility && !feasibility.is_feasible)}
-                >
-                  <Play className="h-4 w-4 mr-1.5" />
-                  Publish & จัดคู่ประเมิน
-                </Button>
+                <>
+                  <Button
+                    variant="primary"
+                    onClick={handlePublish}
+                    isLoading={isProcessing}
+                    disabled={Boolean(feasibility && !feasibility.is_feasible)}
+                  >
+                    <Play className="h-4 w-4 mr-1.5" />
+                    Publish & จัดคู่ประเมิน
+                  </Button>
+                  <Button
+                    variant="danger"
+                    onClick={() => setIsDeleteModalOpen(true)}
+                  >
+                    Delete Assignment
+                  </Button>
+                </>
               )}
 
               {(assignment.status === 'PUBLISHED' || assignment.status === 'OPEN') && (
@@ -572,6 +595,23 @@ export const AssignmentDetailView: React.FC<AssignmentDetailViewProps> = ({
             </Button>
             <Button variant="secondary" onClick={handleReopen} isLoading={isProcessing}>
               ยืนยัน Reopen
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Modal */}
+      <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title="ลบงานมอบหมาย (Delete Assignment)">
+        <div className="space-y-4 text-sm">
+          <Alert type="warning">
+            การลบงานมอบหมายจะเป็นการลบอย่างถาวร รวมถึงเกณฑ์การให้คะแนนและข้อมูลที่เกี่ยวข้องทั้งหมด คุณแน่ใจหรือไม่ที่จะลบงานมอบหมายนี้?
+          </Alert>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+              ยกเลิก
+            </Button>
+            <Button variant="danger" onClick={handleDelete} isLoading={isProcessing}>
+              ยืนยันการลบ
             </Button>
           </div>
         </div>
