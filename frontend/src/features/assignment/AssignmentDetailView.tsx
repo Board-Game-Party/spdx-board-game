@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../app/AuthContext';
-import { fetchApi } from '../../lib/api';
+import { fetchApi, downloadFile } from '../../lib/api';
 import { Button } from '../../components/Button';
 import { Modal } from '../../components/Modal';
 import { Alert } from '../../components/Alert';
@@ -83,6 +83,7 @@ export const AssignmentDetailView: React.FC<AssignmentDetailViewProps> = ({
   const [actionReason, setActionReason] = useState('');
   const [allowLowConfidence, setAllowLowConfidence] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [exportingType, setExportingType] = useState<'csv' | 'xlsx' | null>(null);
 
   const isInstructor = activeClassroom?.role === 'OWNER' || activeClassroom?.role === 'CO_TEACHER';
   const isOwner = activeClassroom?.role === 'OWNER';
@@ -198,9 +199,19 @@ export const AssignmentDetailView: React.FC<AssignmentDetailViewProps> = ({
     }
   };
 
-  const handleExport = (type: 'csv' | 'xlsx') => {
-    const url = `/api/assignments/${assignmentId}/export/${type}?mask_identities=true`;
-    window.open(url, '_blank');
+  const handleExport = async (type: 'csv' | 'xlsx') => {
+    setExportingType(type);
+    setError(null);
+    try {
+      await downloadFile(
+        `/assignments/${assignmentId}/export/${type}?mask_identities=true`,
+        `assignment_${assignmentId}.${type}`
+      );
+    } catch (err: any) {
+      setError(err.message || `Export ${type.toUpperCase()} ล้มเหลว`);
+    } finally {
+      setExportingType(null);
+    }
   };
 
   const handleDelete = async () => {
@@ -357,10 +368,22 @@ export const AssignmentDetailView: React.FC<AssignmentDetailViewProps> = ({
 
               {assignment.status !== 'DRAFT' && (
                 <div className="flex gap-1">
-                  <Button variant="outline" size="sm" onClick={() => handleExport('csv')}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    isLoading={exportingType === 'csv'}
+                    disabled={exportingType !== null}
+                    onClick={() => handleExport('csv')}
+                  >
                     <Download className="h-3.5 w-3.5 mr-1" /> CSV
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleExport('xlsx')}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    isLoading={exportingType === 'xlsx'}
+                    disabled={exportingType !== null}
+                    onClick={() => handleExport('xlsx')}
+                  >
                     <Download className="h-3.5 w-3.5 mr-1" /> XLSX
                   </Button>
                 </div>
