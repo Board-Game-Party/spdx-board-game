@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { fetchApi } from '../../lib/api';
 import { Button } from '../../components/Button';
 import { Alert } from '../../components/Alert';
@@ -14,12 +14,14 @@ interface CriterionInput {
 
 export interface AssignmentSetupViewProps {
   classroomId: string;
+  editAssignmentId?: string;
   onSuccess: (assignmentId: string) => void;
   onCancel: () => void;
 }
 
 export const AssignmentSetupView: React.FC<AssignmentSetupViewProps> = ({
   classroomId,
+  editAssignmentId,
   onSuccess,
   onCancel,
 }) => {
@@ -42,7 +44,39 @@ export const AssignmentSetupView: React.FC<AssignmentSetupViewProps> = ({
   ]);
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingData, setIsFetchingData] = useState(!!editAssignmentId);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (editAssignmentId) {
+      setIsFetchingData(true);
+      fetchApi(`/assignments/${editAssignmentId}`)
+        .then((data: any) => {
+          setName(data.name || '');
+          setSlug(data.slug || '');
+          setDescription(data.description || '');
+          setArtifactUrl(data.artifact_url || '');
+          setGroupMaxScore(data.group_max_score || 15.0);
+          setIndividualMaxScore(data.individual_max_score || 5.0);
+          if (data.group_deadline_utc) {
+            const d = new Date(data.group_deadline_utc);
+            const localD = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+            setGroupDeadline(localD.toISOString().slice(0, 16));
+          }
+          if (data.criteria && data.criteria.length > 0) {
+            setCriteria(data.criteria.map((c: any) => ({
+              id: c.id,
+              side: c.side,
+              name: c.name,
+              description: c.description,
+              weight_pct: c.weight_pct,
+            })));
+          }
+        })
+        .catch((err: any) => setError(err.message || 'Failed to load assignment data'))
+        .finally(() => setIsFetchingData(false));
+    }
+  }, [editAssignmentId]);
 
   // Compute live weight sums (US-ASSIGN-02)
   const groupWeightSum = criteria
@@ -106,18 +140,30 @@ export const AssignmentSetupView: React.FC<AssignmentSetupViewProps> = ({
         })),
       };
 
-      const res = await fetchApi<any>(`/classrooms/${classroomId}/assignments`, {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
-
-      onSuccess(res.id);
+      if (editAssignmentId) {
+        await fetchApi(`/assignments/${editAssignmentId}`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        });
+        window.alert('บันทึกการแก้ไขงานมอบหมายสำเร็จ');
+        onSuccess(editAssignmentId);
+      } else {
+        const res = await fetchApi<any>(`/classrooms/${classroomId}/assignments`, {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+        onSuccess(res.id);
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to create assignment');
+      setError(err.message || 'Failed to save assignment');
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (isFetchingData) {
+    return <div className="text-center py-20 text-slate-400">กำลังโหลดข้อมูลงานมอบหมาย...</div>;
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
@@ -125,7 +171,9 @@ export const AssignmentSetupView: React.FC<AssignmentSetupViewProps> = ({
         <Button variant="ghost" size="sm" onClick={onCancel}>
           <ArrowLeft className="h-4 w-4 mr-1" /> ย้อนกลับ
         </Button>
-        <h1 className="text-2xl font-bold text-slate-900">สร้างงานมอบหมายใหม่ (Create Assignment)</h1>
+        <h1 className="text-2xl font-bold text-slate-900">
+          {editAssignmentId ? 'แก้ไขงานมอบหมายฉบับร่าง (Edit Draft)' : 'สร้างงานมอบหมายใหม่ (Create Assignment)'}
+        </h1>
       </div>
 
       {error && <Alert type="error">{error}</Alert>}
@@ -389,7 +437,7 @@ export const AssignmentSetupView: React.FC<AssignmentSetupViewProps> = ({
             isLoading={isLoading}
             disabled={!isGroupWeightValid || !isIndivWeightValid}
           >
-            สร้างงานมอบหมายฉบับร่าง (Save Draft)
+            {editAssignmentId ? 'บันทึกการแก้ไข (Save Changes)' : 'สร้างงานมอบหมายฉบับร่าง (Save Draft)'}
           </Button>
         </div>
       </form>

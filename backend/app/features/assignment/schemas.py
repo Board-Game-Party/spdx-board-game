@@ -40,6 +40,7 @@ class CreateAssignmentRequest(BaseModel):
 
 class UpdateAssignmentRequest(BaseModel):
     name: Optional[str] = None
+    slug: Optional[str] = None
     description: Optional[str] = None
     artifact_url: Optional[str] = None
     group_max_score: Optional[float] = None

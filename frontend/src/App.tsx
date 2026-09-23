@@ -112,12 +112,23 @@ export const App: React.FC = () => {
           />
         )}
 
+        {/* Edit Assignment */}
+        {currentView === 'assignment-edit' && effectiveClassroomId && selectedAssignmentId && (
+          <AssignmentSetupView
+            classroomId={effectiveClassroomId}
+            editAssignmentId={selectedAssignmentId}
+            onSuccess={() => setCurrentView('assignment-detail')}
+            onCancel={() => setCurrentView('assignment-detail')}
+          />
+        )}
+
         {/* 4. Assignment Detail */}
         {currentView === 'assignment-detail' && selectedAssignmentId && (
           <AssignmentDetailView
             assignmentId={selectedAssignmentId}
             onBack={() => setCurrentView('classroom-detail')}
             onNavigateTab={(tab) => setCurrentView(tab)}
+            onEdit={() => setCurrentView('assignment-edit')}
           />
         )}
 
