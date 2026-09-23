@@ -10,3 +10,6 @@ Cause that cause this problem is from FrontEnd code(Path:...\\spdx-board-game\fr
 it use 'window.open()' make the client use normal 'GET request' that bypass the frontend's API. Which mean the request not carry the auth token and so the BackEnd reject the request.
 
 To fix it. Use the 'downloadFile' function form lib. so the request it pass FrontEnd's API. Also add the error handling.
+
+**edit change**
+as of now the another two buttons are now fixed!! It did have the same problem and it now fixed.
