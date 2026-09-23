@@ -59,12 +59,14 @@ export interface AssignmentDetailViewProps {
   assignmentId: string;
   onBack: () => void;
   onNavigateTab: (tab: string) => void;
+  onEdit?: () => void;
 }
 
 export const AssignmentDetailView: React.FC<AssignmentDetailViewProps> = ({
   assignmentId,
   onBack,
   onNavigateTab,
+  onEdit,
 }) => {
   const { activeClassroom } = useAuth();
   const [assignment, setAssignment] = useState<AssignmentDetail | null>(null);
@@ -299,6 +301,14 @@ export const AssignmentDetailView: React.FC<AssignmentDetailViewProps> = ({
                     <Play className="h-4 w-4 mr-1.5" />
                     Publish & จัดคู่ประเมิน
                   </Button>
+                  {onEdit && (
+                    <Button
+                      variant="outline"
+                      onClick={onEdit}
+                    >
+                      Edit Assignment
+                    </Button>
+                  )}
                   <Button
                     variant="danger"
                     onClick={() => setIsDeleteModalOpen(true)}
