@@ -129,4 +129,47 @@ describe('AssignmentDetailView Component (Delete Draft)', () => {
     expect(window.alert).toHaveBeenCalledWith('ลบงานมอบหมายสำเร็จ');
     expect(mockOnBack).toHaveBeenCalled();
   });
+
+  it('renders Edit Assignment button only when status is DRAFT and calls onEdit when clicked', async () => {
+    const mockOnEdit = vi.fn();
+    vi.mocked(fetchApi).mockResolvedValueOnce({
+      ...mockAssignmentBase,
+      status: 'DRAFT'
+    }).mockResolvedValueOnce({}); // feasibility mock
+
+    renderWithContext(
+      <AssignmentDetailView assignmentId="asn-1" onBack={mockOnBack} onNavigateTab={mockOnNavigateTab} onEdit={mockOnEdit} />,
+      { activeClassroom: mockClassroomOwner }
+    );
+
+    // Wait for load
+    await waitFor(() => {
+      expect(screen.getByText('Test Assignment')).toBeInTheDocument();
+    });
+
+    const editBtn = screen.getByRole('button', { name: /Edit Assignment/i });
+    expect(editBtn).toBeInTheDocument();
+
+    fireEvent.click(editBtn);
+    expect(mockOnEdit).toHaveBeenCalled();
+  });
+
+  it('hides Edit Assignment button when status is not DRAFT', async () => {
+    const mockOnEdit = vi.fn();
+    vi.mocked(fetchApi).mockResolvedValueOnce({
+      ...mockAssignmentBase,
+      status: 'PUBLISHED'
+    });
+
+    renderWithContext(
+      <AssignmentDetailView assignmentId="asn-1" onBack={mockOnBack} onNavigateTab={mockOnNavigateTab} onEdit={mockOnEdit} />,
+      { activeClassroom: mockClassroomOwner }
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Test Assignment')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole('button', { name: /Edit Assignment/i })).not.toBeInTheDocument();
+  });
 });

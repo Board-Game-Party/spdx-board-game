@@ -102,6 +102,17 @@ def update_assignment(db: Session, assignment: Assignment, req: UpdateAssignment
 
     if req.name is not None:
         assignment.name = req.name
+    if req.slug is not None and req.slug != assignment.slug:
+        existing = db.query(Assignment).filter(
+            Assignment.classroom_id == assignment.classroom_id,
+            Assignment.slug == req.slug
+        ).first()
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Assignment slug '{req.slug}' already exists in this classroom"
+            )
+        assignment.slug = req.slug
     if req.description is not None:
         assignment.description = req.description
     if req.artifact_url is not None:

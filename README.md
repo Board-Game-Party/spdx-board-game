@@ -87,12 +87,14 @@ docker compose exec api python3 -m backend.scripts.seed_demo_data
 - **ReDoc Documentation**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
 
 ### Run Tests in Ephemeral RAM Database
+
 ```bash
 # Runs test suite against ephemeral tmpfs database and exits cleanly
 docker compose -f compose.test.yaml up unit --abort-on-container-exit --exit-code-from unit
 ```
 
 ### Stop & Teardown Containers
+
 ```bash
 docker compose down -v
 ```
@@ -102,10 +104,12 @@ docker compose down -v
 ## 💻 Local Development (Without Docker)
 
 ### 1. Prerequisites
+
 - **Python**: v3.12 or later
 - **Node.js**: v18.0.0 or later (with npm)
 
 ### 2. Installation
+
 ```bash
 # Install backend dependencies
 pip install -r requirements.txt
@@ -115,6 +119,7 @@ npm --prefix frontend install
 ```
 
 ### 3. Seed Demo Data & Start Services
+
 ```bash
 # Seed SE101 demo classroom and test accounts
 python3 -m backend.scripts.seed_demo_data
@@ -138,6 +143,7 @@ npm test
 ```
 
 ### Run Specific Test Suites
+
 ```bash
 # Backend pytest suite only
 python3 -m pytest -v
@@ -154,6 +160,7 @@ npm run lint
 ## 🔄 Demo Helper Scripts
 
 ### With Docker
+
 ```bash
 # Seed SE101 classroom with teacher, TA, and 4 student groups
 docker compose exec api python3 -m backend.scripts.seed_demo_data
@@ -163,6 +170,7 @@ docker compose exec api python3 -m backend.scripts.reset_demo
 ```
 
 ### Local Development (Without Docker)
+
 ```bash
 # Seed SE101 classroom with teacher, TA, and 4 student groups
 python3 -m backend.scripts.seed_demo_data
@@ -216,7 +224,3 @@ python3 -m backend.scripts.reset_demo
 ```
 
 ---
-
-## 📄 License
-
-This project is licensed under the MIT License — see repository files for details.
