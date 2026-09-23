@@ -715,3 +715,165 @@ def test_classroom_archive_and_unarchive_lifecycle(client):
     )
     assert res_invalid.status_code == 422
 
+def test_delete_classroom_owner_only_and_role_authorization(client):
+    """
+    Verify Owner-Only classroom deletion and role authorization:
+    - OWNER can delete classroom (HTTP 204)
+    - Subsequent GET /api/classrooms/{id} returns HTTP 404
+    - CO_TEACHER, TA, and STUDENT attempts to delete return HTTP 403 Forbidden
+    """
+    # 1. Login as OWNER and create a classroom
+    res_owner_login = client.post("/api/auth/google", json={"email": "prof.delowner@uni.ac.th", "display_name": "Dr. Owner"})
+    assert res_owner_login.status_code == 200
+    owner_token = res_owner_login.json()["access_token"]
+    owner_headers = {"Authorization": f"Bearer {owner_token}"}
+
+    res_create = client.post("/api/classrooms", headers=owner_headers, json={
+        "name": "Classroom Deletion Test",
+        "slug": "deletion-test-class",
+        "timezone": "Asia/Bangkok",
+        "allowed_email_domains": ["uni.ac.th"]
+    })
+    assert res_create.status_code == 201
+    classroom_id = res_create.json()["id"]
+
+    # 2. Add CO_TEACHER, TA, and STUDENT members
+    res_add_co = client.post(
+        f"/api/classrooms/{classroom_id}/members",
+        headers=owner_headers,
+        json={"email": "coteacher.deltest@uni.ac.th", "role": "CO_TEACHER", "display_name": "Co Teacher"}
+    )
+    assert res_add_co.status_code == 201
+
+    res_add_ta = client.post(
+        f"/api/classrooms/{classroom_id}/members",
+        headers=owner_headers,
+        json={"email": "ta.deltest@uni.ac.th", "role": "TA", "display_name": "Teaching Assistant"}
+    )
+    assert res_add_ta.status_code == 201
+
+    res_add_st = client.post(
+        f"/api/classrooms/{classroom_id}/members",
+        headers=owner_headers,
+        json={"email": "student.deltest@uni.ac.th", "role": "STUDENT", "display_name": "Student"}
+    )
+    assert res_add_st.status_code == 201
+
+    # 3. Log in as CO_TEACHER, TA, and STUDENT to get tokens
+    res_co_login = client.post("/api/auth/google", json={"email": "coteacher.deltest@uni.ac.th"})
+    assert res_co_login.status_code == 200
+    co_headers = {"Authorization": f"Bearer {res_co_login.json()['access_token']}"}
+
+    res_ta_login = client.post("/api/auth/google", json={"email": "ta.deltest@uni.ac.th"})
+    assert res_ta_login.status_code == 200
+    ta_headers = {"Authorization": f"Bearer {res_ta_login.json()['access_token']}"}
+
+    res_st_login = client.post("/api/auth/google", json={"email": "student.deltest@uni.ac.th"})
+    assert res_st_login.status_code == 200
+    st_headers = {"Authorization": f"Bearer {res_st_login.json()['access_token']}"}
+
+    # 4. Verify CO_TEACHER attempt to delete returns HTTP 403 Forbidden
+    res_del_co = client.delete(f"/api/classrooms/{classroom_id}", headers=co_headers)
+    assert res_del_co.status_code == 403
+
+    # 5. Verify TA attempt to delete returns HTTP 403 Forbidden
+    res_del_ta = client.delete(f"/api/classrooms/{classroom_id}", headers=ta_headers)
+    assert res_del_ta.status_code == 403
+
+    # 6. Verify STUDENT attempt to delete returns HTTP 403 Forbidden
+    res_del_st = client.delete(f"/api/classrooms/{classroom_id}", headers=st_headers)
+    assert res_del_st.status_code == 403
+
+    # 7. Verify classroom is still intact
+    res_get_intact = client.get(f"/api/classrooms/{classroom_id}", headers=owner_headers)
+    assert res_get_intact.status_code == 200
+
+    # 8. Verify OWNER can delete classroom (HTTP 204 No Content)
+    res_del_owner = client.delete(f"/api/classrooms/{classroom_id}", headers=owner_headers)
+    assert res_del_owner.status_code == 204
+
+    # 9. Verify subsequent GET /classrooms/{id} returns HTTP 404 Not Found
+    res_get_after = client.get(f"/api/classrooms/{classroom_id}", headers=owner_headers)
+    assert res_get_after.status_code == 404
+
+
+def test_create_classroom_role_authorization(client):
+    """
+    FR-AUTHZ-01 / Role Matrix §3:
+    Verify that CO_TEACHER, TA, and STUDENT cannot create a new classroom (HTTP 403).
+    Only OWNER-level users (or a first-time user with no memberships) may create one.
+    """
+    # 1. Login as owner and create a base classroom
+    res = client.post("/api/auth/google", json={
+        "email": "owner.create.auth@uni.ac.th",
+        "display_name": "Dr. Create Owner"
+    })
+    assert res.status_code == 200
+    owner_headers = {"Authorization": f"Bearer {res.json()['access_token']}"}
+
+    res = client.post("/api/classrooms", headers=owner_headers, json={
+        "name": "Create Auth Test Classroom",
+        "slug": "create-auth-test",
+        "timezone": "Asia/Bangkok",
+        "allowed_email_domains": ["uni.ac.th"]
+    })
+    assert res.status_code == 201
+    classroom_id = res.json()["id"]
+
+    # 2. Add CO_TEACHER, TA, and STUDENT members via the owner
+    for email, role, name in [
+        ("co.create.auth@uni.ac.th", "CO_TEACHER", "Co Teacher"),
+        ("ta.create.auth@uni.ac.th", "TA", "Teaching Assistant"),
+        ("stu.create.auth@uni.ac.th", "STUDENT", "Student"),
+    ]:
+        res = client.post(
+            f"/api/classrooms/{classroom_id}/members",
+            headers=owner_headers,
+            json={"email": email, "role": role, "display_name": name}
+        )
+        assert res.status_code == 201, f"Failed to add {role}"
+
+    # 3. Each non-owner role attempts to create a new classroom — must get 403
+    for email, role in [
+        ("co.create.auth@uni.ac.th", "CO_TEACHER"),
+        ("ta.create.auth@uni.ac.th", "TA"),
+        ("stu.create.auth@uni.ac.th", "STUDENT"),
+    ]:
+        res_login = client.post("/api/auth/google", json={"email": email})
+        assert res_login.status_code == 200
+        headers = {"Authorization": f"Bearer {res_login.json()['access_token']}"}
+
+        res_create = client.post("/api/classrooms", headers=headers, json={
+            "name": f"Unauthorized Classroom by {role}",
+            "slug": f"unauth-{role.lower().replace('_', '-')}",
+            "timezone": "Asia/Bangkok",
+            "allowed_email_domains": ["uni.ac.th"]
+        })
+        assert res_create.status_code == 403, (
+            f"{role} should be denied classroom creation but got {res_create.status_code}"
+        )
+
+    # 4. OWNER can still create additional classrooms
+    res_second = client.post("/api/classrooms", headers=owner_headers, json={
+        "name": "Owner Second Classroom",
+        "slug": "owner-second-class",
+        "timezone": "Asia/Bangkok",
+        "allowed_email_domains": ["uni.ac.th"]
+    })
+    assert res_second.status_code == 201, "OWNER must be able to create additional classrooms"
+
+    # 5. A brand-new user (no prior memberships) can create their first classroom
+    res_new = client.post("/api/auth/google", json={
+        "email": "brand.new.instructor@uni.ac.th",
+        "display_name": "New Instructor"
+    })
+    assert res_new.status_code == 200
+    new_headers = {"Authorization": f"Bearer {res_new.json()['access_token']}"}
+
+    res_first = client.post("/api/classrooms", headers=new_headers, json={
+        "name": "First Classroom Ever",
+        "slug": "first-classroom-ever",
+        "timezone": "Asia/Bangkok",
+        "allowed_email_domains": ["uni.ac.th"]
+    })
+    assert res_first.status_code == 201, "A first-time user must be allowed to create their first classroom"

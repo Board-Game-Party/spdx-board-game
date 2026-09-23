@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 
 from backend.app.core.security import normalize_email
-from backend.app.shared.models import User, Classroom, ClassroomMember, GroupEntity
+from backend.app.shared.models import User, Classroom, ClassroomMember, GroupEntity, AuditEvent
 from backend.app.features.classroom.schemas import (
     CreateClassroomRequest, UpdateClassroomRequest, ClassroomDetail, ClassroomSummary,
     ClassroomMemberOut, GroupSummary, AddMemberRequest, UpdateMemberRequest,
@@ -66,6 +66,11 @@ def update_classroom(db: Session, classroom: Classroom, req: UpdateClassroomRequ
     db.commit()
     db.refresh(classroom)
     return get_classroom_detail(db, classroom)
+
+def delete_classroom(db: Session, classroom: Classroom) -> None:
+    db.query(AuditEvent).filter(AuditEvent.classroom_id == classroom.id).delete()
+    db.delete(classroom)
+    db.commit()
 
 def list_user_classrooms(db: Session, current_user: User, status_filter: str = "ACTIVE") -> List[ClassroomSummary]:
     memberships = db.query(ClassroomMember).filter(ClassroomMember.user_id == current_user.id).all()
