@@ -98,3 +98,51 @@ describe('Navbar Logout Confirmation', () => {
     expect(mockLogout).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('Navbar Classroom Switcher', () => {
+  it('switches classroom and navigates to classroom-detail even from classrooms view', () => {
+    const mockSetActiveClassroom = vi.fn();
+    const mockNavigate = vi.fn();
+
+    const authValueMulti: AuthContextType = {
+      ...mockAuthValue,
+      setActiveClassroom: mockSetActiveClassroom,
+      user: {
+        ...mockAuthValue.user!,
+        memberships: [
+          {
+            id: 'm1',
+            classroom_id: 'c1',
+            classroom_name: 'SE 101',
+            classroom_slug: 'se-101',
+            role: 'STUDENT',
+          },
+          {
+            id: 'm2',
+            classroom_id: 'c2',
+            classroom_name: 'SE 102',
+            classroom_slug: 'se-102',
+            role: 'OWNER',
+          },
+        ],
+      },
+    };
+
+    render(
+      <AuthContext.Provider value={authValueMulti}>
+        <Navbar currentView="classrooms" onNavigate={mockNavigate} />
+      </AuthContext.Provider>
+    );
+
+    const select = screen.getByRole('combobox');
+    expect(select).toBeInTheDocument();
+
+    fireEvent.change(select, { target: { value: 'm2' } });
+
+    expect(mockSetActiveClassroom).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'm2', classroom_id: 'c2' })
+    );
+    expect(mockNavigate).toHaveBeenCalledWith('classroom-detail', 'c2');
+  });
+});
+
