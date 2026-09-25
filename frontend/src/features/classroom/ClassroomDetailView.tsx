@@ -66,7 +66,7 @@ export const ClassroomDetailView: React.FC<ClassroomDetailViewProps> = ({
   onCreateAssignment,
   onBack,
 }) => {
-  const { activeClassroom, setActiveClassroom, refreshProfile } = useAuth();
+  const { user, activeClassroom, setActiveClassroom, refreshProfile } = useAuth();
   const [classroom, setClassroom] = useState<ClassroomDetail | null>(null);
   const [assignments, setAssignments] = useState<AssignmentSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -115,7 +115,10 @@ export const ClassroomDetailView: React.FC<ClassroomDetailViewProps> = ({
       ]);
       setClassroom(cRes);
       setAssignments(aRes);
-      if (activeClassroom && activeClassroom.classroom_id === classroomId && activeClassroom.status !== cRes.status) {
+      const currentMem = user?.memberships.find((m) => m.classroom_id === classroomId);
+      if (currentMem && (activeClassroom?.classroom_id !== classroomId || activeClassroom.status !== cRes.status)) {
+        setActiveClassroom({ ...currentMem, status: cRes.status });
+      } else if (activeClassroom && activeClassroom.classroom_id === classroomId && activeClassroom.status !== cRes.status) {
         setActiveClassroom({ ...activeClassroom, status: cRes.status });
       }
     } catch (err: any) {
