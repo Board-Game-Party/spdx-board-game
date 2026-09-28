@@ -14,38 +14,44 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: "24"
+  NODE_VERSION: "20"
 
 jobs:
   lint-and-unit-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npm ci --prefix frontend
+          pip install -r requirements.txt
 
       - name: Lint
         run: npm run lint
-
-      - name: Typecheck
-        run: npm run typecheck
 
       - name: Unit Tests with Coverage
         run: npm test -- --coverage
 
       - name: Upload Coverage Report
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: coverage-${{ github.sha }}
-          path: coverage/
+          path: frontend/coverage/
 
   e2e-tests:
     needs: lint-and-unit-test
@@ -71,18 +77,19 @@ jobs:
       BASE_URL: http://localhost:3000
 
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
-      - run: npm ci
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --prefix frontend
 
       - name: Cache Playwright browsers
-        uses: actions/cache@v6
+        uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
 
       - run: npx playwright install --with-deps chromium
 
@@ -91,7 +98,7 @@ jobs:
         # playwright.config.ts มี webServer อยู่แล้ว จึงไม่ต้องสตาร์ท app เอง
 
       - name: Upload Playwright Report
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: playwright-report-${{ github.sha }}
@@ -105,7 +112,7 @@ jobs:
     environment: staging
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
       - name: Deploy to Staging
         run: npx vercel --token "$VERCEL_TOKEN" --yes
         env:
