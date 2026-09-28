@@ -167,3 +167,19 @@ def require_can_create_classroom(current_user: User, db: Session) -> None:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied. Only users with OWNER role may create classrooms.",
         )
+
+
+def sanitize_csv_cell(value: str) -> str:
+    """
+    FR-SEC-04: Prevent CSV/spreadsheet formula injection.
+    Any cell value that starts with '=', '+', '-', or '@' is prefixed
+    with a single quote so spreadsheet apps (Excel, Google Sheets)
+    treat it as plain text rather than a formula.
+    Applied to all user-supplied string fields on both import AND export.
+    """
+    if not value:
+        return ""
+    val_str = str(value).strip()
+    if val_str.startswith(("=", "+", "-", "@")):
+        return "'" + val_str
+    return val_str

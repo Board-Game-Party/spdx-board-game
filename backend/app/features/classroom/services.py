@@ -6,7 +6,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 
-from backend.app.core.security import normalize_email
+from backend.app.core.security import normalize_email, sanitize_csv_cell
 from backend.app.shared.models import User, Classroom, ClassroomMember, GroupEntity, AuditEvent
 from backend.app.features.classroom.schemas import (
     CreateClassroomRequest, UpdateClassroomRequest, ClassroomDetail, ClassroomSummary,
@@ -15,15 +15,6 @@ from backend.app.features.classroom.schemas import (
 )
 
 EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-
-def sanitize_csv_cell(value: str) -> str:
-    """FR-SEC-04: Escape potential formula injection triggers"""
-    if not value:
-        return ""
-    val_str = str(value).strip()
-    if val_str.startswith(("=", "+", "-", "@")):
-        return "'" + val_str
-    return val_str
 
 def create_classroom(db: Session, req: CreateClassroomRequest, current_user: User) -> ClassroomDetail:
     existing = db.query(Classroom).filter(Classroom.slug == req.slug).first()

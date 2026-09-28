@@ -9,6 +9,8 @@ from fastapi.responses import Response
 import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill
 
+from backend.app.core.security import sanitize_csv_cell
+
 from backend.app.shared.models import (
     Assignment, Criterion, ClassroomMember, User, GroupEntity,
     PairAssignment, Comparison, AuditEvent
@@ -41,8 +43,12 @@ def export_assignment_csv(
         writer.writerow(["Group ID", "Group Name", "Component Score", "Max Score", "Comparisons", "Flags", "Overridden", "Override Score", "Override Reason"])
         for g in rep.groups:
             writer.writerow([
-                g.group_id, g.group_name, round(g.component_score, 3), g.max_score,
-                g.comparison_count, ";".join(g.flags), g.is_overridden, g.override_score or "", g.override_reason or ""
+                g.group_id,
+                sanitize_csv_cell(g.group_name),
+                round(g.component_score, 3), g.max_score,
+                g.comparison_count, ";".join(g.flags), g.is_overridden,
+                g.override_score or "",
+                sanitize_csv_cell(g.override_reason or ""),
             ])
 
     elif report_type == "individual":
@@ -54,11 +60,15 @@ def export_assignment_csv(
         ])
         for s in rep.students:
             writer.writerow([
-                s.student_id or "", s.display_name, s.email, s.group_name or "",
+                sanitize_csv_cell(s.student_id or ""),
+                sanitize_csv_cell(s.display_name),
+                s.email,  # email cannot start with =+-@ by format
+                sanitize_csv_cell(s.group_name or ""),
                 round(s.group_component_score, 3), round(s.individual_component_score, 3),
                 round(s.participation_ratio, 3), round(s.participation_multiplier, 3),
                 round(s.net_final_score, 3), s.max_possible_score, ";".join(s.flags),
-                s.is_overridden, s.override_score or "", s.override_reason or ""
+                s.is_overridden,
+                sanitize_csv_cell(s.override_reason or ""),
             ])
 
     elif report_type == "coverage":
@@ -66,7 +76,10 @@ def export_assignment_csv(
         writer.writerow(["Criterion", "Side", "Item A", "Item B", "Target Coverage", "Actual Coverage", "Mean Choice", "Low Coverage Flag"])
         for p in rep.pairs:
             writer.writerow([
-                p.criterion_name, p.side, p.item_a_name, p.item_b_name,
+                sanitize_csv_cell(p.criterion_name),
+                p.side,  # system enum value — safe
+                sanitize_csv_cell(p.item_a_name),
+                sanitize_csv_cell(p.item_b_name),
                 p.target_coverage, p.actual_coverage, p.mean_choice or "", p.is_low_coverage
             ])
 
