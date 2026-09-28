@@ -37,7 +37,7 @@ export const App: React.FC = () => {
     if (activeClassroom?.classroom_id) {
       setSelectedClassroomId(activeClassroom.classroom_id);
       setSelectedAssignmentId(null);
-      if (['assignment-detail', 'assignment-create', 'evaluation', 'group-report', 'individual-report', 'coverage-report', 'quality-report', 'student-score', 'appeals'].includes(currentView)) {
+      if (['assignment-detail', 'assignment-create', 'evaluation', 'group-report', 'individual-report', 'coverage-report', 'quality-report', 'student-score', 'appeals', 'audit-trail'].includes(currentView)) {
         setCurrentView('classroom-detail');
       }
     }
@@ -62,12 +62,17 @@ export const App: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
       <Navbar
         currentView={currentView}
-        onNavigate={(view) => {
+        onNavigate={(view, classroomId) => {
           if (view === 'classrooms') {
             setSelectedClassroomId(null);
             setSelectedAssignmentId(null);
-          } else if (view === 'classroom-detail' && !selectedClassroomId && activeClassroom?.classroom_id) {
-            setSelectedClassroomId(activeClassroom.classroom_id);
+          } else if (view === 'classroom-detail') {
+            if (classroomId) {
+              setSelectedClassroomId(classroomId);
+              setSelectedAssignmentId(null);
+            } else if (!selectedClassroomId && activeClassroom?.classroom_id) {
+              setSelectedClassroomId(activeClassroom.classroom_id);
+            }
           }
           setCurrentView(view);
         }}
