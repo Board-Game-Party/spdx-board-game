@@ -147,3 +147,23 @@ def check_classroom_role(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Access denied. Requires one of roles: {', '.join(allowed_roles)}"
         )
+
+
+def require_can_create_classroom(current_user: User, db: Session) -> None:
+    """
+    FR-AUTHZ-01 / Role Matrix §3:
+    Only users who are already an OWNER in at least one classroom, or have no
+    classroom memberships yet (first-time instructor), may create a new classroom.
+    CO_TEACHER, TA, and STUDENT roles are denied with 403.
+    """
+    memberships = db.query(ClassroomMember).filter(
+        ClassroomMember.user_id == current_user.id
+    ).all()
+    if not memberships:
+        return  # First-time user — allowed to create their first classroom
+    has_owner = any(m.role == "OWNER" for m in memberships)
+    if not has_owner:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Only users with OWNER role may create classrooms.",
+        )

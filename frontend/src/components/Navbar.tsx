@@ -11,7 +11,7 @@ export interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
-  const { user, activeClassroom, setActiveClassroom, notifications, unreadNotificationCount, markNotificationRead, logout } = useAuth();
+  const { user, activeClassroom, notifications, unreadNotificationCount, markNotificationRead, logout } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
