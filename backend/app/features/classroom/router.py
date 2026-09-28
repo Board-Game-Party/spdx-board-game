@@ -3,14 +3,14 @@ from fastapi import APIRouter, Depends, UploadFile, File, Form, Query, HTTPExcep
 from sqlalchemy.orm import Session
 
 from backend.app.core.database import get_db
-from backend.app.core.security import get_current_user, get_classroom_or_404, check_classroom_role
+from backend.app.core.security import get_current_user, get_classroom_or_404, check_classroom_role, require_can_create_classroom
 from backend.app.shared.models import User, ClassroomMember
 from backend.app.features.classroom.schemas import (
     CreateClassroomRequest, UpdateClassroomRequest, ClassroomDetail, ClassroomSummary,
     ClassroomMemberOut, AddMemberRequest, UpdateMemberRequest, RosterImportResult
 )
 from backend.app.features.classroom.services import (
-    create_classroom, update_classroom, list_user_classrooms, get_classroom_detail,
+    create_classroom, update_classroom, delete_classroom, list_user_classrooms, get_classroom_detail,
     add_classroom_member, update_classroom_member, remove_classroom_member, import_roster_csv
 )
 
@@ -31,7 +31,8 @@ def create_new_classroom(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Create a new classroom"""
+    """Create a new classroom — OWNER-level users only (FR-AUTHZ-01 / Role Matrix §3)"""
+    require_can_create_classroom(current_user, db)
     return create_classroom(db, req, current_user)
 
 @router.get("/{classroomId}", response_model=ClassroomDetail)
@@ -55,6 +56,18 @@ def update_single_classroom(
     classroom, member = get_classroom_or_404(classroomId, current_user, db)
     check_classroom_role(member, ["OWNER", "CO_TEACHER"])
     return update_classroom(db, classroom, req)
+
+@router.delete("/{classroomId}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_single_classroom(
+    classroomId: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Permanently delete a classroom (Owner only)"""
+    classroom, member = get_classroom_or_404(classroomId, current_user, db)
+    check_classroom_role(member, ["OWNER"])
+    delete_classroom(db, classroom)
+    return None
 
 @router.post("/{classroomId}/members", response_model=ClassroomMemberOut, status_code=201)
 def add_member(

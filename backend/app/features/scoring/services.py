@@ -275,7 +275,7 @@ def override_score(
     if req.side == "GROUP":
         orig = float(result.group_scores[req.item_id].component_score) if req.item_id in result.group_scores else 0.0
     else:
-        orig = float(result.student_personal_scores[req.item_id].net_score) if req.item_id in result.student_personal_scores else 0.0
+        orig = float(result.individual_scores[req.item_id].component_score) if req.item_id in result.individual_scores else 0.0
 
     override = ScoreOverride(
         assignment_id=assignment.id,
@@ -339,9 +339,12 @@ def get_student_score_view(
 
     grp_score = float(g_override.override_value) if g_override else (float(result.group_scores[g_id].component_score) if g_id in result.group_scores else 0.0)
 
-    # Check k-anonymity (FR-ANON-02: must have received >= 3 comparisons)
-    indiv_received_count = result.individual_scores[current_user.id].comparison_count if current_user.id in result.individual_scores else 0
-    k_satisfied = (indiv_received_count >= assignment.min_comparisons) or (float(assignment.individual_max_score) == 0)
+    # Check k-anonymity (FR-ANON-02: must have received >= min_comparisons on all criteria)
+    if current_user.id in result.individual_scores and result.individual_scores[current_user.id].criterion_scores:
+        min_received = min(c.comparison_count for c in result.individual_scores[current_user.id].criterion_scores.values())
+    else:
+        min_received = 0
+    k_satisfied = (min_received >= assignment.min_comparisons) or (float(assignment.individual_max_score) == 0)
 
     if float(assignment.individual_max_score) > 0:
         if k_satisfied:
@@ -358,13 +361,10 @@ def get_student_score_view(
     p_ratio = float(personal.participation_ratio) if personal else 1.0
     p_mult = float(personal.participation_multiplier) if personal else 1.0
 
-    if u_override:
-        net_score = float(u_override.override_value)
+    if indiv_score is not None:
+        net_score = round((grp_score + indiv_score) * p_mult, 3)
     else:
-        if indiv_score is not None:
-            net_score = round((grp_score + indiv_score) * p_mult, 3)
-        else:
-            net_score = round(grp_score * p_mult, 3)
+        net_score = round(grp_score * p_mult, 3)
 
     is_final = (assignment.status == "FINALIZED")
     status_label = "คะแนนสุทธิ (Final)" if is_final else "ชั่วคราว — อาจเปลี่ยนแปลงได้"

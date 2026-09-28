@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchApi } from '../../lib/api';
+import { fetchApi, downloadFile } from '../../lib/api';
 import { Button } from '../../components/Button';
 import { Modal } from '../../components/Modal';
 import { Alert } from '../../components/Alert';
@@ -41,6 +41,7 @@ export const PairCoverageView: React.FC<PairCoverageViewProps> = ({ assignmentId
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Extra evaluator modal
   const [selectedPair, setSelectedPair] = useState<PairCoverageItem | null>(null);
@@ -126,7 +127,18 @@ export const PairCoverageView: React.FC<PairCoverageViewProps> = ({ assignmentId
           <Button
             variant="outline"
             size="sm"
-            onClick={() => window.open(`/api/assignments/${assignmentId}/export/csv?report=coverage`, '_blank')}
+            isLoading={isExporting}
+            onClick={async () => {
+              setIsExporting(true);
+              setError(null);
+              try {
+                await downloadFile(`/assignments/${assignmentId}/export/csv?report=coverage`, 'coverage_report.csv');
+              } catch (err: any) {
+                setError(err.message || 'Export ล้มเหลว');
+              } finally {
+                setIsExporting(false);
+              }
+            }}
           >
             <Download className="h-3.5 w-3.5 mr-1" /> Export CSV
           </Button>

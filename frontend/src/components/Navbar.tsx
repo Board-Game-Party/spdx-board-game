@@ -7,7 +7,7 @@ import { Button } from './Button';
 
 export interface NavbarProps {
   currentView: string;
-  onNavigate: (view: string) => void;
+  onNavigate: (view: string, classroomId?: string) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
@@ -38,7 +38,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
             {activeClassroom && (
               <nav className="hidden md:flex gap-1">
                 <button
-                  onClick={() => onNavigate('classroom-detail')}
+                  onClick={() => onNavigate('classroom-detail', activeClassroom.classroom_id)}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     currentView === 'classroom-detail'
                       ? 'bg-slate-100 text-slate-900'
@@ -74,9 +74,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
                   const selected = user.memberships.find(m => m.id === e.target.value);
                   if (selected) {
                     setActiveClassroom(selected);
-                    if (currentView !== 'classrooms') {
-                      onNavigate('classroom-detail');
-                    }
+                    onNavigate('classroom-detail', selected.classroom_id);
                   }
                 }}
                 className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-700 focus:ring-1 focus:ring-brand-500"

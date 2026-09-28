@@ -117,6 +117,10 @@ export const ClassroomListView: React.FC<ClassroomListViewProps> = ({ onSelectCl
     }
   };
 
+  const canCreateClassroom =
+    !user?.memberships.length ||
+    user.memberships.some((m) => m.role === 'OWNER');
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
@@ -127,10 +131,12 @@ export const ClassroomListView: React.FC<ClassroomListViewProps> = ({ onSelectCl
           </p>
         </div>
 
-        <Button variant="primary" onClick={() => setIsModalOpen(true)}>
-          <Plus className="h-4 w-4 mr-1.5" />
-          สร้างห้องเรียนใหม่
-        </Button>
+        {canCreateClassroom && (
+          <Button variant="primary" onClick={() => setIsModalOpen(true)}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            สร้างห้องเรียนใหม่
+          </Button>
+        )}
       </div>
 
       {error && <Alert type="error">{error}</Alert>}
@@ -179,7 +185,9 @@ export const ClassroomListView: React.FC<ClassroomListViewProps> = ({ onSelectCl
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
             {statusFilter === 'ARCHIVED'
               ? 'ห้องเรียนที่ถูกจัดเก็บจะแสดงที่นี่'
-              : 'กดปุ่ม "สร้างห้องเรียนใหม่" ด้านบนเพื่อเริ่มตั้งค่าห้องเรียน นำเข้ารายชื่อนักศึกษา และสร้างงานมอบหมาย'}
+              : canCreateClassroom
+              ? 'กดปุ่ม "สร้างห้องเรียนใหม่" ด้านบนเพื่อเริ่มตั้งค่าห้องเรียน นำเข้ารายชื่อนักศึกษา และสร้างงานมอบหมาย'
+              : 'คุณยังไม่ได้รับการเพิ่มเข้าห้องเรียนใดๆ กรุณาติดต่ออาจารย์ผู้สอน'}
           </p>
         </div>
       ) : (

@@ -8,7 +8,7 @@ import { RosterImportModal } from './RosterImportModal';
 import { formatDate } from '../../lib/utils';
 import {
   Users, Plus, Upload, BookOpen, Layers,
-  ChevronRight, Calendar, Archive, ArchiveRestore
+  ChevronRight, Calendar, Archive, ArchiveRestore, Trash2
 } from 'lucide-react';
 
 interface ClassroomMemberOut {
@@ -66,7 +66,7 @@ export const ClassroomDetailView: React.FC<ClassroomDetailViewProps> = ({
   onCreateAssignment,
   onBack,
 }) => {
-  const { activeClassroom, setActiveClassroom, refreshProfile } = useAuth();
+  const { user, activeClassroom, setActiveClassroom, refreshProfile } = useAuth();
   const [classroom, setClassroom] = useState<ClassroomDetail | null>(null);
   const [assignments, setAssignments] = useState<AssignmentSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -76,6 +76,11 @@ export const ClassroomDetailView: React.FC<ClassroomDetailViewProps> = ({
   const [isConfirmArchiveOpen, setIsConfirmArchiveOpen] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
   const [archiveError, setArchiveError] = useState<string | null>(null);
+
+  // Delete classroom state
+  const [isConfirmDeleteClassroomOpen, setIsConfirmDeleteClassroomOpen] = useState(false);
+  const [isDeletingClassroom, setIsDeletingClassroom] = useState(false);
+  const [deleteClassroomError, setDeleteClassroomError] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<'assignments' | 'roster' | 'groups'>('assignments');
   const [isRosterModalOpen, setIsRosterModalOpen] = useState(false);
@@ -101,6 +106,7 @@ export const ClassroomDetailView: React.FC<ClassroomDetailViewProps> = ({
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const isInstructor = activeClassroom?.role === 'OWNER' || activeClassroom?.role === 'CO_TEACHER';
+  const isOwner = activeClassroom?.role === 'OWNER';
   const isTA = activeClassroom?.role === 'TA';
   const classroomStatus = activeClassroom?.status || classroom?.status || 'ACTIVE';
   const isArchived = classroomStatus === 'ARCHIVED';
@@ -115,7 +121,10 @@ export const ClassroomDetailView: React.FC<ClassroomDetailViewProps> = ({
       ]);
       setClassroom(cRes);
       setAssignments(aRes);
-      if (activeClassroom && activeClassroom.classroom_id === classroomId && activeClassroom.status !== cRes.status) {
+      const currentMem = user?.memberships.find((m) => m.classroom_id === classroomId);
+      if (currentMem && (activeClassroom?.classroom_id !== classroomId || activeClassroom.status !== cRes.status)) {
+        setActiveClassroom({ ...currentMem, status: cRes.status });
+      } else if (activeClassroom && activeClassroom.classroom_id === classroomId && activeClassroom.status !== cRes.status) {
         setActiveClassroom({ ...activeClassroom, status: cRes.status });
       }
     } catch (err: any) {
@@ -145,6 +154,20 @@ export const ClassroomDetailView: React.FC<ClassroomDetailViewProps> = ({
       setArchiveError(err.message || 'Failed to update classroom status');
     } finally {
       setIsArchiving(false);
+    }
+  };
+
+  const handleDeleteClassroom = async () => {
+    if (!classroom) return;
+    setIsDeletingClassroom(true);
+    setDeleteClassroomError(null);
+    try {
+      await fetchApi('/classrooms/' + classroom.id, { method: 'DELETE' });
+      await refreshProfile();
+      onBack();
+    } catch (err: any) {
+      setDeleteClassroomError(err.message || 'Failed to delete classroom');
+      setIsDeletingClassroom(false);
     }
   };
 
@@ -330,6 +353,17 @@ export const ClassroomDetailView: React.FC<ClassroomDetailViewProps> = ({
             >
               <Plus className="h-4 w-4 mr-1.5" />
               สร้างงานมอบหมาย
+            </Button>
+          )}
+
+          {isOwner && (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => setIsConfirmDeleteClassroomOpen(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-1.5" />
+              ลบห้องเรียน
             </Button>
           )}
         </div>
@@ -794,6 +828,53 @@ export const ClassroomDetailView: React.FC<ClassroomDetailViewProps> = ({
               isLoading={isArchiving}
             >
               {isArchived ? 'ยืนยันการกู้คืน' : 'ยืนยันการจัดเก็บ'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Delete Classroom Confirmation Modal */}
+      <Modal
+        isOpen={isConfirmDeleteClassroomOpen}
+        onClose={() => {
+          if (!isDeletingClassroom) {
+            setIsConfirmDeleteClassroomOpen(false);
+            setDeleteClassroomError(null);
+          }
+        }}
+        title="ยืนยันการลบห้องเรียนถาวร"
+      >
+        <div className="space-y-4 text-sm">
+          {deleteClassroomError && <Alert type="error">{deleteClassroomError}</Alert>}
+
+          <p className="text-slate-700">
+            คุณแน่ใจหรือไม่ว่าต้องการลบห้องเรียน{' '}
+            <span className="font-semibold text-slate-900">{classroom.name}</span> ถาวร?
+          </p>
+
+          <Alert type="error">
+            ⚠️ <strong>คำเตือน:</strong> การกระทำนี้ไม่สามารถย้อนกลับได้ ข้อมูลงานมอบหมายทั้งหมด (Assignments), ผลคะแนน (Scores), กลุ่ม (Groups) และรายชื่อผู้เรียน (Roster) ในห้องเรียนนี้จะถูกลบออกอย่างถาวร
+          </Alert>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => {
+                setIsConfirmDeleteClassroomOpen(false);
+                setDeleteClassroomError(null);
+              }}
+              disabled={isDeletingClassroom}
+            >
+              ยกเลิก
+            </Button>
+            <Button
+              variant="danger"
+              type="button"
+              onClick={handleDeleteClassroom}
+              isLoading={isDeletingClassroom}
+            >
+              ยืนยันการลบห้องเรียน
             </Button>
           </div>
         </div>
