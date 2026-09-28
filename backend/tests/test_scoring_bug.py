@@ -28,7 +28,7 @@ def test_override_individual_score(mock_run, db_session: Session):
     )
 
     # Setup DB
-    u1 = User(id="u1", email="u1@test.com", display_name="User 1")
+    u1 = User(id="u1", email_raw="u1@test.com", email_normalized="u1@test.com", display_name="User 1")
     db_session.add(u1)
     
     group = GroupEntity(id="g1", classroom_id="c1", name="Group 1")
