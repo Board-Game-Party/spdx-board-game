@@ -11,7 +11,7 @@ export interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
-  const { user, activeClassroom, setActiveClassroom, notifications, unreadNotificationCount, markNotificationRead, logout } = useAuth();
+  const { user, activeClassroom, notifications, unreadNotificationCount, markNotificationRead, logout } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
@@ -66,29 +66,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentView, onNavigate }) => {
 
           {/* Right actions */}
           <div className="flex items-center gap-3">
-            {/* Classroom switcher */}
-            {user && user.memberships.length > 1 && (
-              <select
-                value={activeClassroom?.id || ''}
-                onChange={(e) => {
-                  const selected = user.memberships.find(m => m.id === e.target.value);
-                  if (selected) {
-                    setActiveClassroom(selected);
-                    if (currentView !== 'classrooms') {
-                      onNavigate('classroom-detail');
-                    }
-                  }
-                }}
-                className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-slate-700 focus:ring-1 focus:ring-brand-500"
-              >
-                {user.memberships.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.classroom_name} ({m.role})
-                  </option>
-                ))}
-              </select>
-            )}
-
             {/* Role badge */}
             {activeClassroom && (
               <span
