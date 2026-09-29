@@ -21,8 +21,8 @@ def list_assignments_endpoint(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    classroom, _ = get_classroom_or_404(classroomId, current_user, db)
-    return list_assignments(db, classroom)
+    classroom, member = get_classroom_or_404(classroomId, current_user, db)
+    return list_assignments(db, classroom, member)
 
 @router.post("/classrooms/{classroomId}/assignments", response_model=AssignmentDetail, status_code=201)
 def create_assignment_endpoint(
@@ -45,7 +45,10 @@ def get_assignment_endpoint(
     if not assignment:
         from fastapi import HTTPException, status
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
-    get_classroom_or_404(assignment.classroom_id, current_user, db)
+    _, member = get_classroom_or_404(assignment.classroom_id, current_user, db)
+    if assignment.status == "DRAFT" and member.role == "STUDENT":
+        from fastapi import HTTPException, status
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Students cannot view draft assignments")
     return get_assignment_detail(db, assignment)
 
 @router.patch("/assignments/{assignmentId}", response_model=AssignmentDetail)
