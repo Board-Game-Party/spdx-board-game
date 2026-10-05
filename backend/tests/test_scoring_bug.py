@@ -12,6 +12,9 @@ def test_override_individual_score(mock_run, db_session: Session):
     class MockComponent:
         def __init__(self, c):
             self.component_score = c
+    class MockCrit:
+        def __init__(self, count):
+            self.comparison_count = count
     class MockIndiv:
         def __init__(self, c, count, net):
             self.component_score = c
@@ -19,6 +22,7 @@ def test_override_individual_score(mock_run, db_session: Session):
             self.net_score = net
             self.participation_ratio = 1.0
             self.participation_multiplier = 1.0
+            self.criterion_scores = {"c1": MockCrit(count)}
 
     mock_run.return_value = ScoringEngineResult(
         formula_version="v2.0",
@@ -28,7 +32,7 @@ def test_override_individual_score(mock_run, db_session: Session):
     )
 
     # Setup DB
-    u1 = User(id="u1", email="u1@test.com", display_name="User 1")
+    u1 = User(id="u1", email_raw="u1@test.com", email_normalized="u1@test.com", display_name="User 1")
     db_session.add(u1)
     
     group = GroupEntity(id="g1", classroom_id="c1", name="Group 1")
@@ -36,7 +40,8 @@ def test_override_individual_score(mock_run, db_session: Session):
     
     assignment = Assignment(
         id="a1", classroom_id="c1", name="A1", slug="a1", status="PUBLISHED",
-        group_max_score=15.0, individual_max_score=5.0, min_comparisons=3
+        group_max_score=15.0, individual_max_score=5.0, min_comparisons=3,
+        created_by="u1"
     )
     db_session.add(assignment)
     

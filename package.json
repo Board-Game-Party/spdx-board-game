@@ -6,7 +6,8 @@
     "dev": "npm --prefix frontend run dev",
     "build": "npm --prefix frontend run build",
     "lint": "npm --prefix frontend run lint",
-    "test": "python3 -m pytest -v && npm --prefix frontend run test",
+    "typecheck": "npm --prefix frontend run typecheck",
+    "test": "python3 -m pytest -v && npm --prefix frontend run test --",
     "e2e": "playwright test",
     "e2e:report": "playwright show-report"
   },

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../app/AuthContext';
-import { Layers, ShieldCheck, Lock, Sparkles } from 'lucide-react';
+import { Layers, Lock, Sparkles } from 'lucide-react';
 import { Alert } from '../../components/Alert';
 import { GoogleOAuthModal } from './GoogleOAuthModal';
 
@@ -39,11 +39,6 @@ export const LoginView: React.FC = () => {
               Campus Edition
             </span>
           </div>
-        </div>
-
-        <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
-          <ShieldCheck className="w-4 h-4 text-emerald-400" />
-          <span>Google Workspace SSO Protected</span>
         </div>
       </header>
 
