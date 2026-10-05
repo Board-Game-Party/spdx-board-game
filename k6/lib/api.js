@@ -1,8 +1,10 @@
 import http from 'k6/http';
 import { BASE_URL, API_PREFIX } from './config.js';
+import { check } from 'k6';
 
 export const EP = {
   LOGIN: 'auth/google',
+  ME: 'auth/me',
   NOTIFICATIONS: 'notifications',
   WORKSHEET: 'evaluations/worksheet',
   DRAFT: 'evaluations/draft',
@@ -20,7 +22,7 @@ export const EP = {
 
 export function login(email) {
   const url = `${BASE_URL}${API_PREFIX}/${EP.LOGIN}`;
-  const payload = JSON.stringify({ token: `mock_token_for_${email}`, role: email.includes('instructor') ? 'instructor' : 'student' });
+  const payload = JSON.stringify({ email: email });
   const params = { headers: { 'Content-Type': 'application/json' }, tags: { name: EP.LOGIN } };
   const res = http.post(url, payload, params);
   
@@ -30,20 +32,44 @@ export function login(email) {
   return 'fake-token';
 }
 
-export function get(endpoint, token) {
+export function get(endpoint, tagName, token, expectedStatuses) {
+  // If tagName is actually token (for backward compatibility with journeys.js)
+  if (typeof tagName === 'string' && tagName.length > 50) {
+    token = tagName;
+    tagName = endpoint.split('?')[0].split('/')[0];
+  }
+
   const url = `${BASE_URL}${API_PREFIX}/${endpoint}`;
   const params = {
     headers: { 'Authorization': `Bearer ${token}` },
-    tags: { name: endpoint.split('?')[0].split('/')[0] } 
+    tags: { name: tagName || endpoint.split('?')[0].split('/')[0] } 
   };
-  return http.get(url, params);
+  const res = http.get(url, params);
+  checkHardFailure(res);
+  return res;
 }
 
-export function post(endpoint, payload, token) {
+export function post(endpoint, payload, tagName, token, expectedStatuses) {
+  if (typeof tagName === 'string' && tagName.length > 50) {
+    token = tagName;
+    tagName = endpoint.split('?')[0].split('/')[0];
+  }
+
   const url = `${BASE_URL}${API_PREFIX}/${endpoint}`;
   const params = {
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-    tags: { name: endpoint.split('?')[0].split('/')[0] } 
+    tags: { name: tagName || endpoint.split('?')[0].split('/')[0] } 
   };
-  return http.post(url, JSON.stringify(payload), params);
+  const res = http.post(url, JSON.stringify(payload), params);
+  checkHardFailure(res);
+  return res;
+}
+
+import { Counter } from 'k6/metrics';
+export const hardFailures = new Counter('pe_hard_failures');
+
+export function checkHardFailure(res) {
+  if (res.status >= 500 || res.error) {
+    hardFailures.add(1);
+  }
 }

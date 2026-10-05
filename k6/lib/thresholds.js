@@ -1,9 +1,12 @@
-export function buildThresholds(endpoints) {
+export function buildThresholds(endpoints, additionalThresholds = {}) {
   const t = {
     'http_req_failed': ['rate<0.01'],
+    ...additionalThresholds
   };
   
   endpoints.forEach(ep => {
+    if (!ep) return;
+    
     // Determine tier
     let tier = 'job';
     if (ep.includes('auth') || ep.includes('notifications') || ep.includes('draft')) {

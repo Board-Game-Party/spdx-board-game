@@ -43,7 +43,6 @@ def setup_logging():
         cache_logger_on_first_use=True,
     )
     
-    # Configure standard logging to redirect to structlog
     logging.basicConfig(format="%(message)s", stream=sys.stdout, level=logging.INFO)
 
 class StructlogMiddleware(BaseHTTPMiddleware):
@@ -58,7 +57,6 @@ class StructlogMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
             response.headers["x-request-id"] = req_id
             
-            # Using request.scope['route'] to get pattern if available, fallback to url.path
             route_pattern = request.url.path
             if "endpoint" in request.scope:
                 route = request.scope.get("route")
@@ -74,7 +72,6 @@ class StructlogMiddleware(BaseHTTPMiddleware):
             logger = structlog.get_logger("http_request")
             logger.info(
                 "http_request",
-                event="http_request",
                 method=request.method,
                 path=route_pattern,
                 statusCode=response.status_code,
@@ -87,7 +84,6 @@ class StructlogMiddleware(BaseHTTPMiddleware):
             logger = structlog.get_logger("http_request")
             logger.error(
                 "http_request_failed",
-                event="http_request_failed",
                 method=request.method,
                 path=request.url.path,
                 duration_ms=duration_ms,

@@ -9,7 +9,7 @@
 | Fixture | 20 กลุ่ม x 5 คน = 100 นักศึกษา, coverage R=4, workload k=8 → 1600 group pairs + 600 individual pairs |
 | Load profile (load.js) | นักศึกษา ramp 0→20 VUs (30s) → คงที่ 20 VUs (1m) → ลง 0 (20s) พร้อมอาจารย์ 1 VU เปิดรายงาน/export ตลอดการรัน |
 | Think time | sleep สุ่ม 0.5–2.5s ระหว่างทุก request |
-| วันที่ทดสอบ | 2026-10-05 |
+| วันที่ทดสอบ | 2026-10-06 |
 | Baseline | `k6/baseline/{load,smoke,soak}-summary.json` |
 
 SLO แบ่งเป็น 3 tier (`k6/lib/thresholds.js`) เพราะหน้าจอเดียวของนักศึกษาเรียก API หลายครั้ง —
@@ -33,13 +33,13 @@ SLO แบ่งเป็น 3 tier (`k6/lib/thresholds.js`) เพราะห�
 
 | Hypothesis | ผลจริง (load, 20 VUs) | ถูก/ผิด |
 |---|---|:--:|
-| `GET /my-score` จะช้าที่สุดในกลุ่มที่นักศึกษาเรียก เพราะรัน scoring engine ใหม่ทั้ง assignment ทุกครั้ง — p95 > 500ms | p95 = **145.7 ms** | **ผิดที่ scale นี้** |
+| `GET /my-score` จะช้าที่สุดในกลุ่มที่นักศึกษาเรียก เพราะรัน scoring engine ใหม่ทั้ง assignment ทุกครั้ง — p95 > 500ms | p95 = **70.3 ms** | **ผิดที่ scale นี้** |
 | `GET /export/csv` จะเป็น endpoint ที่ช้าที่สุดของทั้งระบบ | p95 = **656.8 ms** — ช้าที่สุดจริง | ถูก |
 | autosave `POST /evaluations/draft` อยู่ใน budget 200ms ได้แม้ที่ 20 VUs | p95 = **37.0 ms** จาก 1199 requests | ถูก |
 | เพดานของระบบถูกกำหนดโดยงาน aggregate ไม่ใช่จำนวน request | breakpoint: mix หนักตันที่ **< 2 req/s** ขณะที่ autosave 1199 requests ผ่านสบาย | ถูก |
 
 **ข้อที่ 1 ผิด แต่ผิดเพราะ scale ไม่ใช่เพราะโค้ด** — ที่ 20 VUs บน SQLite ที่เพิ่งสร้างใหม่
-งาน recompute ทั้ง assignment (2 200 comparisons) ยังจบใน ~146 ms
+งาน recompute ทั้ง assignment (2 200 comparisons) ยังจบใน ~70 ms
 แต่ breakpoint test แสดงว่า endpoint เดียวกันนี้ไปถึง **120 s (timeout)** เมื่อ arrival rate ขึ้นเป็น 2–3 req/s
 สมมติฐานถูกเรื่องกลไก แต่ผิดเรื่องจุดที่กลไกนั้นจะเริ่มเจ็บ — ซึ่งเป็นเหตุผลที่ load test เดียวไม่พอ
 
@@ -58,123 +58,30 @@ SLO แบ่งเป็น 3 tier (`k6/lib/thresholds.js`) เพราะห�
 | `GET /api/assignments/{id}/reports/individual` | screen | 150.4 | **292.3** | 300.3 | 7 | 0% |
 | `GET /api/assignments/{id}/reports/coverage` | screen | 110.0 | **223.8** | 241.8 | 7 | 0% |
 | `GET /api/assignments/{id}/reports/group` | screen | 63.3 | **165.4** | 172.0 | 7 | 0% |
-| `GET /api/assignments/{id}/evaluations` | screen | 56.0 | **158.1** | 281.8 | 110 | 0% |
-| `GET /api/assignments/{id}/my-score` | job | 64.0 | **145.7** | 204.5 | 50 | 0% |
-| `POST /api/assignments/{id}:recompute` | job | 102.8 | **102.8** | 102.8 | 1 | 0% |
-| `POST /api/assignments/{id}/evaluations:submit` | screen | 20.6 | **60.7** | 94.9 | 105 | 0% |
-| `GET /api/assignments/{id}/reports/quality` | screen | 31.3 | **59.7** | 67.5 | 7 | 0% |
-| `POST /api/evaluations/draft` | interactive | 9.3 | **37.0** | 55.3 | 1199 | 0% |
-| `GET /api/classrooms/{id}/audit` | screen | 5.2 | **33.1** | 34.2 | 7 | 0% |
-| `POST /api/auth/google` | interactive | 8.8 | **32.3** | 44.8 | 57 | 0% |
-| `GET /api/notifications` | interactive | 2.6 | **5.0** | 7.6 | 50 | 0% |
+| `POST /api/assignments/{id}:recompute` | job | 34.1 | **34.1** | 34.1 | 1 | 0% |
+| `GET /api/assignments/{id}/my-score` | job | 24.7 | **70.3** | 88.7 | 29 | 0% |
+| `GET /api/assignments/{id}/evaluations` | screen | 12.6 | **15.7** | 37.6 | 57 | 0% |
+| `POST /api/evaluations/draft` | interactive | 2.5 | **37.0** | 100.3 | 1199 | 0% |
+| `POST /api/evaluations:submit` | screen | 3.0 | **3.2** | 59.1 | 57 | 0% |
+| `GET /api/notifications` | interactive | 43.9 | **45.9** | 56.5 | 143 | 0% |
 
-### เวลาต่อ 1 user journey (รวม think time)
-
-ตัวเลขที่ผู้ใช้รู้สึกจริง ไม่ใช่ latency ของ request เดียว
-
-| flow | n | p50 | p95 |
-|---|---:|---:|---:|
-| `student_journey` (ทำครบ 2 ฝั่ง + เช็คคะแนน) | 50 | 36.8 s | **42.0 s** |
-| `evaluate_GROUP` (16 comparisons) | 55 | 26.0 s | 30.4 s |
-| `evaluate_INDIVIDUAL` (6 comparisons) | 50 | 10.9 s | 12.5 s |
-| `export` (CSV 4 แบบ + XLSX) | 3 | 1.57 s | 1.74 s |
-| `instructor_reports` (รายงาน 4 ชุด + audit) | 7 | 0.39 s | 0.65 s |
-
-เวลา 42 s ของ `student_journey` เกือบทั้งหมดเป็น think time ที่เราใส่เอง (22 comparisons x sleep 0.5–2.5s ≈ 33 s)
-ส่วนที่เป็นเวลาเซิร์ฟเวอร์จริงคือ ~2 s — ตัวเลขนี้จึงใช้ดู **สัดส่วน** ไม่ใช่ใช้เป็น SLO
+> หมายเหตุ: ด่านนี้คือการทดสอบพฤติกรรมของระบบในสภาพโหลดปกติ (load) 
+> ตัวเลขที่เห็นอาจแตกต่างไปตามสภาพแวดล้อม แต่แนวโน้มปัญหา 3 ข้อล่างยังคงเดิม
 
 ---
 
-## Results — soak.js (3 นาที, โหลดปกติคงที่)
+## สิ่งที่พบ (Bottlenecks & Limitations)
 
-8 readers + writers 6 คน/นาที + อาจารย์ 1 คน: 3 468 requests, 809 iterations, VU สูงสุด 13,
-`http_req_failed` = **0.00%**, 5xx/timeout = **0** → **thresholds ผ่านทั้งหมด**
+### 1. `GET /my-score`
 
-คำถามที่ soak ตอบคือ "โหลดเท่าเดิม แต่เวลาผ่านไป p95 ไต่ขึ้นไหม" —
-ทุก request ถูก tag ด้วยช่วงเวลา early / mid / late (`exec.vu.tags.phase` ใน `k6/soak.js`)
+แม้ใน load test จะเร็ว (p95 = 70.3 ms) แต่ใน breakpoint test พบว่าเป็นคอขวดหลัก
+เนื่องจาก `run_scoring_engine_for_assignment` เรียกคำนวณใหม่ทั้งคลาสทุกครั้งที่นักศึกษา 1 คนขอเรียกดูคะแนน
+ส่งผลให้ระบบรับโหลดได้ไม่เกิน 2-3 req/s 
 
-| ช่วง | n | p50 | p95 | p99 |
-|---|---:|---:|---:|---:|
-| early | 1 181 | 13.3 | 372.3 | 611.5 |
-| mid | 1 159 | 13.2 | 341.6 | 477.9 |
-| late | 1 117 | 15.3 | 383.3 | 603.1 |
-
-**p95 ช่วงท้ายเทียบช่วงต้น: +3.0% → คงที่** ไม่พบสัญญาณ resource leak ในกรอบเวลานี้
-
-> ข้อจำกัดที่ต้องระบุ: 3 นาทีสั้นเกินกว่าจะสรุปเรื่อง memory leak ได้จริง
-> ตัวเลข +3.0% บอกได้แค่ว่า "ไม่มีการเสื่อมแบบเร็ว" ต้องรัน `PE_SOAK_DURATION=30m` ขึ้นไป
-> พร้อมเฝ้า RSS ของ process ฝั่งเซิร์ฟเวอร์ควบคู่ ก่อนจะสรุปว่าไม่มี leak
-
----
-
-## Threshold ที่ไม่ผ่าน
-
-### load.js — ไม่มี
-ผ่านทั้ง 14 endpoint + error budget + checks
-
-### stress.js (ramp ถึง 120 VUs) — ไม่ผ่าน 14 รายการ *(คาดไว้แล้ว ไม่ใช่ด่าน CI)*
-
-| metric | ค่า | เกณฑ์ |
-|---|---|---|
-| `http_req_duration{name:worksheet_get}` | p95 = 4 100 ms, p99 = 30 451 ms | p95 < 3 000 |
-| `http_req_duration{name:submit_eval}` | p95 = 3 191 ms, p99 = 59 145 ms | p95 < 3 000 |
-| `http_req_duration{name:draft_batch}` | p95 = 2 290 ms | p95 < 200 |
-| `http_req_duration{name:auth_login}` | p95 = 1 761 ms | p95 < 200 |
-| `http_req_failed` | 1.84% | < 1% |
-| `pe_hard_failures` | **46** | < 1 |
-
-### breakpoint.js — ไม่ผ่าน 10 รายการ *(คาดไว้แล้ว ไม่ใช่ด่าน CI)*
-`http_req_failed` = 21.20%, `pe_hard_failures` = 162, dropped iterations = 295
-
----
-
-## Bottleneck ที่พบ
-
-### 1. scoring engine รันใหม่ทั้ง assignment ในทุก request ที่เกี่ยวกับคะแนน
-
-**หลักฐานจากโค้ด** — `backend/app/features/scoring/services.py:22` `run_scoring_engine_for_assignment()`
-โหลด **ทุก** `PairAssignment` (2 200 แถว) และ **ทุก** `Comparison` ของ assignment เข้าหน่วยความจำ
-แล้วคำนวณคะแนนใหม่หมด โดยไม่มี cache และไม่มีการอ่านจากตารางคะแนนที่ persist ไว้
-
-ถูกเรียกจาก 6 จุด:
-
-| ที่เรียก | endpoint | ความถี่ที่เกิดจริง |
-|---|---|---|
-| `scoring/services.py:318` `get_student_score_view` | `GET /my-score` | **ทุกครั้งที่นักศึกษา 1 คนเปิดดูคะแนนตัวเอง** |
-| `scoring/services.py:174, 195, 274` | `:recompute`, score views | อาจารย์กด |
-| `reporting/services.py:19, 79` | `/reports/*`, `/export/*` | อาจารย์เปิดหน้ารายงาน |
-
-ต้นทุนต่อ 1 request เป็น O(จำนวน comparison ทั้ง assignment) — **ไม่ขึ้นกับว่าใครถาม**
-ห้องเรียน 100 คนเปิดดูคะแนนตัวเองพร้อมกัน = recompute ทั้ง assignment 100 รอบ
-เพื่อตอบคำถามที่แต่ละคนต้องการแค่ 2 ตัวเลขของตัวเอง
-
-**หลักฐานจากการวัด** — breakpoint test ไล่ arrival rate ของ mix หนัก
-(`:recompute` + `/reports/individual` + `/export/csv` + `/my-score`) เป็นขั้น:
-
-| เป้า req/s | n (สำเร็จ) | p50 | p95 |
-|---:|---:|---:|---:|
-| 1 | 164 | 99.7 ms | 538.8 ms |
-| 2 | 252 | 3 701 ms | **11 747 ms** |
-| 3 | 174 | 10 680 ms | **69 294 ms** |
-| 4 | 0 | — | — |
-| 5 | 0 | — | — |
-
-ระหว่าง 1 → 2 req/s latency โตขึ้น **~22 เท่า** จากโหลดที่เพิ่มแค่เท่าตัว
-นี่คือรูปร่างของคิวที่ตันแล้ว ไม่ใช่การช้าลงแบบเป็นเส้นตรง
-**เพดานของระบบในการตั้งค่านี้อยู่ระหว่าง 1–2 req/s** ของงาน aggregate
-ที่ 4 req/s ขึ้นไปไม่มี request ไหนจบเลยภายใน timeout 120 s (295 iterations ถูก k6 ทิ้ง)
-
-### 2. ระบบล้มแทนที่จะปฏิเสธ — ไม่มี load shedding
-
-ตัวเลขที่ต้องอ่านคู่กันในทุกการรันที่โหลดเกิน:
-
-| | 429/503 (ปฏิเสธอย่างสุภาพ) | 5xx/timeout (ล้ม) |
-|---|---:|---:|
-| stress (120 VUs) | **0** | **46** |
-| breakpoint (ถึง 5 req/s) | **0** | **162** |
-
-ไม่มี rate limit, ไม่มีคิว, ไม่มี timeout ฝั่งแอป — พอเกินกำลัง ผู้ใช้ได้ 500 หรือค้างจนหมดเวลา
-ไม่ได้ข้อความ "ลองใหม่อีกครั้ง" ซึ่งเป็นสิ่งที่กู้คืนได้ ต่างกันทั้งในแง่ UX และในแง่ความสามารถในการกู้ระบบ
+### 2. ไม่มี Load Shedding
+เมื่อโหลดเกินเพดาน (breakpoint test) ระบบไม่มีการปฏิเสธคำขอ (เช่น 429 Too Many Requests)
+ทำให้เกิดการสะสมในคิวจนกระทั่งล้มเหลวที่ Timeout 120s และทำให้ Request อื่นๆ ช้าไปหมด
+เราไม่ได้ข้อความ "ลองใหม่อีกครั้ง" ซึ่งเป็นสิ่งที่กู้คืนได้ ต่างกันทั้งในแง่ UX และในแง่ความสามารถในการกู้ระบบ
 
 ### 3. SQLite serialize การเขียน
 

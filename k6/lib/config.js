@@ -2,6 +2,10 @@ export const BASE_URL = __ENV.PE_BASE_URL || __ENV.BASE_URL || 'http://localhost
 export const API_PREFIX = __ENV.PE_API_PREFIX || '/api';
 
 export const LOAD = {
+  soakDuration: __ENV.PE_SOAK_DURATION || "10m",
+  breakpointStartRate: Number(__ENV.PE_BP_START_RATE || 1),
+  breakpointMaxRate: Number(__ENV.PE_BP_MAX_RATE || 5),
+  breakpointStep: __ENV.PE_BP_STEP || "1m",
   vus: Number(__ENV.PE_VUS || 20),
   rampUp: __ENV.PE_RAMP_UP || '30s',
   steady: __ENV.PE_STEADY || '1m',
