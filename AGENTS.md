@@ -7,7 +7,8 @@
 ## Setup & Commands
 
 - dev:        `docker compose up`
-- test:       `docker compose -f compose.test.yaml up unit --abort-on-container-exit --exit-code-from unit`
+- unit test:  `docker compose -f compose.test.yaml up unit --abort-on-container-exit --exit-code-from unit`
+- e2e:        `docker compose -f compose.test.yaml --profile e2e up e2e --abort-on-container-exit --exit-code-from e2e`
 - teardown:   `docker compose -f compose.test.yaml down -v`
 - local dev:  `npm run dev`
 - local test: `npm test`

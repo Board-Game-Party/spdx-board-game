@@ -137,3 +137,6 @@ pairwise_evaluation_prd.md
 TestCSV.csv
 Check-list.md
 
+
+# Playwright
+test-results/

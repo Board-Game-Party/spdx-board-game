@@ -124,8 +124,8 @@ npm --prefix frontend install
 # Seed SE101 demo classroom and test accounts
 python3 -m backend.scripts.seed_demo_data
 
-# Start backend server
-python3 -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+# Start backend server (with development environment to enable test endpoints)
+NODE_ENV=development python3 -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
 
 # Start frontend development server
 npm run dev
@@ -153,6 +153,25 @@ npm --prefix frontend run test
 
 # Type checking & linting
 npm run lint
+```
+
+### End-to-End Testing (Playwright)
+
+We use Playwright for full-stack E2E testing. You can run these tests either inside a dedicated Docker container or locally.
+
+**Run via Docker (Recommended):**
+```bash
+# Run E2E tests inside a container against an ephemeral test environment
+docker compose -f compose.test.yaml --profile e2e up e2e --abort-on-container-exit --exit-code-from e2e
+```
+
+**Run Locally (requires local dev servers to be running):**
+```bash
+# Run all E2E tests
+npm run e2e
+
+# View the HTML report of the test results
+npm run e2e:report
 ```
 
 ---
@@ -220,6 +239,8 @@ python3 -m backend.scripts.reset_demo
 │   ├── package.json        # Frontend dependencies and scripts
 │   └── vite.config.ts      # Vite configuration & Vitest setup
 ├── docs/                   # Architectural guides, user stories, OpenAPI specs, and lab docs
+├── tests/                  # End-to-End test specs (Playwright)
+├── playwright.config.ts    # Playwright configuration
 └── package.json            # Root workspace scripts (npm test, dev, lint, build)
 ```
 
