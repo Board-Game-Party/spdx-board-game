@@ -34,8 +34,8 @@ export const LoginView: React.FC = () => {
             <Layers className="h-6 w-6" />
           </div>
           <div>
-            <span className="font-bold text-lg tracking-tight text-white">PairEval</span>
-            <span className="ml-2 text-xs font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+            <span className="font-bold text-lg tracking-tight text-yellow-400 drop-shadow-[0_2px_8px_rgba(250,204,21,0.5)]">PairEval</span>
+            <span className="ml-2 text-xs font-mono px-2 py-0.5 rounded-full bg-yellow-900/40 text-yellow-300 border border-yellow-500/50">
               Campus Edition
             </span>
           </div>
