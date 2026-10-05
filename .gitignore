@@ -144,3 +144,4 @@ playwright-report/
 .vercel
 .env*
 .vercel/
+!k6/lib/

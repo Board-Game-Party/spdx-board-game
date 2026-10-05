@@ -1,0 +1,681 @@
+{
+  "options": {
+    "summaryTrendStats": [
+      "avg",
+      "min",
+      "med",
+      "max",
+      "p(90)",
+      "p(95)",
+      "p(99)"
+    ],
+    "summaryTimeUnit": "",
+    "noColor": false
+  },
+  "state": {
+    "isStdOutTTY": false,
+    "isStdErrTTY": false,
+    "testRunDurationMs": 10829.59317
+  },
+  "metrics": {
+    "http_req_duration{name:recompute}": {
+      "thresholds": {
+        "p(95)<30000": {
+          "ok": true
+        }
+      },
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(99)": 0,
+        "avg": 0,
+        "min": 0,
+        "med": 0,
+        "max": 0,
+        "p(90)": 0,
+        "p(95)": 0
+      }
+    },
+    "http_req_duration{name:my-score}": {
+      "thresholds": {
+        "p(95)<30000": {
+          "ok": true
+        }
+      },
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0,
+        "min": 0,
+        "med": 0,
+        "max": 0,
+        "p(90)": 0,
+        "p(95)": 0,
+        "p(99)": 0
+      }
+    },
+    "http_reqs": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 18,
+        "rate": 1.6621122989054997
+      }
+    },
+    "iteration_duration": {
+      "contains": "time",
+      "values": {
+        "min": 10731.948459,
+        "med": 10731.948459,
+        "max": 10731.948459,
+        "p(90)": 10731.948459,
+        "p(95)": 10731.948459,
+        "p(99)": 10731.948459,
+        "avg": 10731.948459
+      },
+      "type": "trend"
+    },
+    "data_received": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 2436,
+        "rate": 224.93919778521098
+      }
+    },
+    "http_req_duration{name:reports}": {
+      "thresholds": {
+        "p(95)<3000": {
+          "ok": true
+        }
+      },
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "max": 0,
+        "p(90)": 0,
+        "p(95)": 0,
+        "p(99)": 0,
+        "avg": 0,
+        "min": 0,
+        "med": 0
+      }
+    },
+    "pe_flow_duration{flow:export}": {
+      "thresholds": {
+        "max>=0": {
+          "ok": true
+        }
+      },
+      "type": "trend",
+      "contains": "default",
+      "values": {
+        "p(99)": 2349,
+        "avg": 2349,
+        "min": 2349,
+        "med": 2349,
+        "max": 2349,
+        "p(90)": 2349,
+        "p(95)": 2349
+      }
+    },
+    "http_req_sending": {
+      "values": {
+        "avg": 0.028712777777777778,
+        "min": 0.006422,
+        "med": 0.019326,
+        "max": 0.180519,
+        "p(90)": 0.04121910000000001,
+        "p(95)": 0.06404604999999981,
+        "p(99)": 0.15722440999999976
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "http_req_duration{name:evaluations}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0.354977,
+        "min": 0.354977,
+        "med": 0.354977,
+        "max": 0.354977,
+        "p(90)": 0.354977,
+        "p(95)": 0.354977,
+        "p(99)": 0.354977
+      },
+      "thresholds": {
+        "p(95)<3000": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_duration{name:audit}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(90)": 0,
+        "p(95)": 0,
+        "p(99)": 0,
+        "avg": 0,
+        "min": 0,
+        "med": 0,
+        "max": 0
+      },
+      "thresholds": {
+        "p(95)<30000": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_tls_handshaking": {
+      "contains": "time",
+      "values": {
+        "avg": 0,
+        "min": 0,
+        "med": 0,
+        "max": 0,
+        "p(90)": 0,
+        "p(95)": 0,
+        "p(99)": 0
+      },
+      "type": "trend"
+    },
+    "http_req_receiving": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "med": 0.038873500000000005,
+        "max": 0.079249,
+        "p(90)": 0.055070600000000004,
+        "p(95)": 0.059466099999999966,
+        "p(99)": 0.07529241999999996,
+        "avg": 0.03534544444444444,
+        "min": 0
+      }
+    },
+    "vus": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 1,
+        "min": 1,
+        "max": 1
+      }
+    },
+    "iterations": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 1,
+        "rate": 0.09233957216141665
+      }
+    },
+    "pe_flow_duration{flow:recompute}": {
+      "type": "trend",
+      "contains": "default",
+      "values": {
+        "med": 2,
+        "max": 2,
+        "p(90)": 2,
+        "p(95)": 2,
+        "p(99)": 2,
+        "avg": 2,
+        "min": 2
+      },
+      "thresholds": {
+        "max>=0": {
+          "ok": true
+        }
+      }
+    },
+    "pe_business_errors": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 8,
+        "rate": 0.7387165772913332
+      },
+      "thresholds": {
+        "count<1": {
+          "ok": false
+        }
+      }
+    },
+    "data_sent": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 3730,
+        "rate": 344.4266041620841
+      }
+    },
+    "pe_flow_duration{flow:student_readonly}": {
+      "type": "trend",
+      "contains": "default",
+      "values": {
+        "p(90)": 4012,
+        "p(95)": 4012,
+        "p(99)": 4012,
+        "avg": 4012,
+        "min": 4012,
+        "med": 4012,
+        "max": 4012
+      },
+      "thresholds": {
+        "max>=0": {
+          "ok": true
+        }
+      }
+    },
+    "http_req_duration{name:auth}": {
+      "values": {
+        "p(95)": 1.412244,
+        "p(99)": 1.412244,
+        "avg": 1.412244,
+        "min": 1.412244,
+        "med": 1.412244,
+        "max": 1.412244,
+        "p(90)": 1.412244
+      },
+      "thresholds": {
+        "p(95)<200": {
+          "ok": true
+        }
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "pe_submit_success": {
+      "thresholds": {
+        "rate>0.99": {
+          "ok": false
+        }
+      },
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "fails": 1,
+        "rate": 0,
+        "passes": 0
+      }
+    },
+    "checks": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 8
+      }
+    },
+    "http_req_blocked": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0.11299672222222219,
+        "min": 0.001543,
+        "med": 0.11404900000000001,
+        "max": 0.364195,
+        "p(90)": 0.1668551,
+        "p(95)": 0.20202349999999974,
+        "p(99)": 0.3317606999999997
+      }
+    },
+    "pe_flow_duration{flow:evaluate_INDIVIDUAL}": {
+      "contains": "default",
+      "values": {
+        "avg": 0,
+        "min": 0,
+        "med": 0,
+        "max": 0,
+        "p(90)": 0,
+        "p(95)": 0,
+        "p(99)": 0
+      },
+      "thresholds": {
+        "max>=0": {
+          "ok": true
+        }
+      },
+      "type": "trend"
+    },
+    "http_req_duration{name:export}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(95)": 0,
+        "p(99)": 0,
+        "avg": 0,
+        "min": 0,
+        "med": 0,
+        "max": 0,
+        "p(90)": 0
+      },
+      "thresholds": {
+        "p(95)<30000": {
+          "ok": true
+        }
+      }
+    },
+    "pe_flow_duration": {
+      "type": "trend",
+      "contains": "default",
+      "values": {
+        "p(99)": 4324,
+        "avg": 2146,
+        "min": 2,
+        "med": 2349,
+        "max": 4337,
+        "p(90)": 4207,
+        "p(95)": 4272
+      }
+    },
+    "pe_flow_duration{flow:evaluate_GROUP}": {
+      "type": "trend",
+      "contains": "default",
+      "values": {
+        "avg": 0,
+        "min": 0,
+        "med": 0,
+        "max": 0,
+        "p(90)": 0,
+        "p(95)": 0,
+        "p(99)": 0
+      },
+      "thresholds": {
+        "max>=0": {
+          "ok": true
+        }
+      }
+    },
+    "pe_flow_duration{flow:student_journey}": {
+      "thresholds": {
+        "max>=0": {
+          "ok": true
+        }
+      },
+      "type": "trend",
+      "contains": "default",
+      "values": {
+        "min": 30,
+        "med": 30,
+        "max": 30,
+        "p(90)": 30,
+        "p(95)": 30,
+        "p(99)": 30,
+        "avg": 30
+      }
+    },
+    "http_req_duration{name:notifications}": {
+      "contains": "time",
+      "values": {
+        "avg": 9.023262,
+        "min": 1.625074,
+        "med": 9.023262,
+        "max": 16.42145,
+        "p(90)": 14.9418124,
+        "p(95)": 15.6816312,
+        "p(99)": 16.27348624
+      },
+      "thresholds": {
+        "p(95)<200": {
+          "ok": true
+        }
+      },
+      "type": "trend"
+    },
+    "vus_max": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 1,
+        "min": 1,
+        "max": 1
+      }
+    },
+    "http_req_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "min": 0.354977,
+        "med": 1.6841655,
+        "max": 80.248117,
+        "p(90)": 13.899097300000003,
+        "p(95)": 25.99545004999991,
+        "p(99)": 69.39758360999988,
+        "avg": 7.478576555555557
+      }
+    },
+    "http_req_failed": {
+      "values": {
+        "rate": 1,
+        "passes": 18,
+        "fails": 0
+      },
+      "thresholds": {
+        "rate<0.01": {
+          "ok": false
+        }
+      },
+      "type": "rate",
+      "contains": "default"
+    },
+    "http_req_connecting": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(95)": 0.10690295,
+        "p(99)": 0.10755099,
+        "avg": 0.04496122222222223,
+        "min": 0,
+        "med": 0.050034499999999996,
+        "max": 0.107713,
+        "p(90)": 0.1048952
+      }
+    },
+    "http_req_waiting": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "med": 1.636455,
+        "max": 80.128623,
+        "p(90)": 13.771118000000001,
+        "p(95)": 25.77650604999991,
+        "p(99)": 69.25819960999989,
+        "avg": 7.4145183333333335,
+        "min": 0.34563
+      }
+    },
+    "pe_flow_duration{flow:instructor_reports}": {
+      "type": "trend",
+      "contains": "default",
+      "values": {
+        "med": 4337,
+        "max": 4337,
+        "p(90)": 4337,
+        "p(95)": 4337,
+        "p(99)": 4337,
+        "avg": 4337,
+        "min": 4337
+      },
+      "thresholds": {
+        "max>=0": {
+          "ok": true
+        }
+      }
+    }
+  },
+  "setup_data": {
+    "ownerEmail": "instructor_1791231283583@uni.ac.th",
+    "ownerToken": "fake-token",
+    "students": [
+      "test_student_1791231283666_1@uni.ac.th",
+      "test_student_1791231283666_2@uni.ac.th",
+      "test_student_1791231283666_3@uni.ac.th",
+      "test_student_1791231283666_4@uni.ac.th",
+      "test_student_1791231283666_5@uni.ac.th",
+      "test_student_1791231283666_6@uni.ac.th",
+      "test_student_1791231283666_7@uni.ac.th",
+      "test_student_1791231283666_8@uni.ac.th",
+      "test_student_1791231283666_9@uni.ac.th",
+      "test_student_1791231283666_10@uni.ac.th",
+      "test_student_1791231283666_11@uni.ac.th",
+      "test_student_1791231283666_12@uni.ac.th",
+      "test_student_1791231283666_13@uni.ac.th",
+      "test_student_1791231283666_14@uni.ac.th",
+      "test_student_1791231283666_15@uni.ac.th",
+      "test_student_1791231283666_16@uni.ac.th",
+      "test_student_1791231283666_17@uni.ac.th",
+      "test_student_1791231283666_18@uni.ac.th",
+      "test_student_1791231283666_19@uni.ac.th",
+      "test_student_1791231283666_20@uni.ac.th",
+      "test_student_1791231283666_21@uni.ac.th",
+      "test_student_1791231283666_22@uni.ac.th",
+      "test_student_1791231283666_23@uni.ac.th",
+      "test_student_1791231283666_24@uni.ac.th",
+      "test_student_1791231283666_25@uni.ac.th",
+      "test_student_1791231283666_26@uni.ac.th",
+      "test_student_1791231283666_27@uni.ac.th",
+      "test_student_1791231283666_28@uni.ac.th",
+      "test_student_1791231283666_29@uni.ac.th",
+      "test_student_1791231283666_30@uni.ac.th",
+      "test_student_1791231283666_31@uni.ac.th",
+      "test_student_1791231283666_32@uni.ac.th",
+      "test_student_1791231283666_33@uni.ac.th",
+      "test_student_1791231283666_34@uni.ac.th",
+      "test_student_1791231283666_35@uni.ac.th",
+      "test_student_1791231283666_36@uni.ac.th",
+      "test_student_1791231283666_37@uni.ac.th",
+      "test_student_1791231283666_38@uni.ac.th",
+      "test_student_1791231283666_39@uni.ac.th",
+      "test_student_1791231283666_40@uni.ac.th",
+      "test_student_1791231283666_41@uni.ac.th",
+      "test_student_1791231283666_42@uni.ac.th",
+      "test_student_1791231283666_43@uni.ac.th",
+      "test_student_1791231283666_44@uni.ac.th",
+      "test_student_1791231283666_45@uni.ac.th",
+      "test_student_1791231283666_46@uni.ac.th",
+      "test_student_1791231283666_47@uni.ac.th",
+      "test_student_1791231283666_48@uni.ac.th",
+      "test_student_1791231283666_49@uni.ac.th",
+      "test_student_1791231283666_50@uni.ac.th",
+      "test_student_1791231283666_51@uni.ac.th",
+      "test_student_1791231283666_52@uni.ac.th",
+      "test_student_1791231283666_53@uni.ac.th",
+      "test_student_1791231283666_54@uni.ac.th",
+      "test_student_1791231283666_55@uni.ac.th",
+      "test_student_1791231283666_56@uni.ac.th",
+      "test_student_1791231283666_57@uni.ac.th",
+      "test_student_1791231283666_58@uni.ac.th",
+      "test_student_1791231283666_59@uni.ac.th",
+      "test_student_1791231283666_60@uni.ac.th",
+      "test_student_1791231283666_61@uni.ac.th",
+      "test_student_1791231283666_62@uni.ac.th",
+      "test_student_1791231283666_63@uni.ac.th",
+      "test_student_1791231283666_64@uni.ac.th",
+      "test_student_1791231283666_65@uni.ac.th",
+      "test_student_1791231283666_66@uni.ac.th",
+      "test_student_1791231283666_67@uni.ac.th",
+      "test_student_1791231283666_68@uni.ac.th",
+      "test_student_1791231283666_69@uni.ac.th",
+      "test_student_1791231283666_70@uni.ac.th",
+      "test_student_1791231283666_71@uni.ac.th",
+      "test_student_1791231283666_72@uni.ac.th",
+      "test_student_1791231283666_73@uni.ac.th",
+      "test_student_1791231283666_74@uni.ac.th",
+      "test_student_1791231283666_75@uni.ac.th",
+      "test_student_1791231283666_76@uni.ac.th",
+      "test_student_1791231283666_77@uni.ac.th",
+      "test_student_1791231283666_78@uni.ac.th",
+      "test_student_1791231283666_79@uni.ac.th",
+      "test_student_1791231283666_80@uni.ac.th",
+      "test_student_1791231283666_81@uni.ac.th",
+      "test_student_1791231283666_82@uni.ac.th",
+      "test_student_1791231283666_83@uni.ac.th",
+      "test_student_1791231283666_84@uni.ac.th",
+      "test_student_1791231283666_85@uni.ac.th",
+      "test_student_1791231283666_86@uni.ac.th",
+      "test_student_1791231283666_87@uni.ac.th",
+      "test_student_1791231283666_88@uni.ac.th",
+      "test_student_1791231283666_89@uni.ac.th",
+      "test_student_1791231283666_90@uni.ac.th",
+      "test_student_1791231283666_91@uni.ac.th",
+      "test_student_1791231283666_92@uni.ac.th",
+      "test_student_1791231283666_93@uni.ac.th",
+      "test_student_1791231283666_94@uni.ac.th",
+      "test_student_1791231283666_95@uni.ac.th",
+      "test_student_1791231283666_96@uni.ac.th",
+      "test_student_1791231283666_97@uni.ac.th",
+      "test_student_1791231283666_98@uni.ac.th",
+      "test_student_1791231283666_99@uni.ac.th",
+      "test_student_1791231283666_100@uni.ac.th"
+    ],
+    "assignmentId": "mock-asgn-id",
+    "classroomId": "mock-cr-id"
+  },
+  "root_group": {
+    "name": "",
+    "path": "",
+    "id": "d41d8cd98f00b204e9800998ecf8427e",
+    "groups": [],
+    "checks": [
+        {
+          "name": "notif 200",
+          "path": "::notif 200",
+          "id": "05ee0d696d762aa7dd03f1fb202d5c17",
+          "passes": 0,
+          "fails": 1
+        },
+        {
+          "name": "worksheet 200",
+          "path": "::worksheet 200",
+          "id": "4cfec7994e1045e4dd4d0691a5b5e4bf",
+          "passes": 0,
+          "fails": 1
+        },
+        {
+          "name": "draft 200/201",
+          "path": "::draft 200/201",
+          "id": "0d703ad3ce3e434fe73a1ea1a1412f77",
+          "passes": 0,
+          "fails": 1
+        },
+        {
+          "name": "submit 200",
+          "path": "::submit 200",
+          "id": "59219bfc39345933d1bdfa2e35c2db39",
+          "passes": 0,
+          "fails": 1
+        },
+        {
+          "name": "report group 200",
+          "path": "::report group 200",
+          "id": "3a0f3bb486ad2697c3c5574aedf459fa",
+          "passes": 0,
+          "fails": 1
+        },
+        {
+          "name": "report quality 200",
+          "path": "::report quality 200",
+          "id": "51827be51bc255fce02c99088ed12017",
+          "passes": 0,
+          "fails": 1
+        },
+        {
+          "name": "recompute 200",
+          "path": "::recompute 200",
+          "id": "a90fe7c56dc172c39a71c1521ec07cc2",
+          "passes": 0,
+          "fails": 1
+        },
+        {
+          "name": "export csv 200",
+          "path": "::export csv 200",
+          "id": "ae08e1f62e1bb963dd5dc5a862282dc7",
+          "passes": 0,
+          "fails": 1
+        }
+      ]
+  }
+}
