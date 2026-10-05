@@ -40,11 +40,6 @@ export const LoginView: React.FC = () => {
             </span>
           </div>
         </div>
-
-        <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
-          <ShieldCheck className="w-4 h-4 text-emerald-400" />
-          <span>Google Workspace SSO Protected</span>
-        </div>
       </header>
 
       {/* Main Hero & Auth Section - Centered */}
