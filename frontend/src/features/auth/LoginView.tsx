@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../app/AuthContext';
-import { Layers, ShieldCheck, Lock, Sparkles } from 'lucide-react';
+import { Layers, Lock, Sparkles } from 'lucide-react';
 import { Alert } from '../../components/Alert';
 import { GoogleOAuthModal } from './GoogleOAuthModal';
 
