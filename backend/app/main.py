@@ -1,3 +1,8 @@
+
+from backend.app.core.logging import setup_logging, StructlogMiddleware
+import structlog
+
+setup_logging()
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -47,6 +52,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(StructlogMiddleware)
+
 
 # Register routers under /api
 app.include_router(auth_router, prefix=settings.API_V1_STR)
