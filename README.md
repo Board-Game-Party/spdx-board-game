@@ -157,8 +157,15 @@ npm run lint
 
 ### End-to-End Testing (Playwright)
 
-We use Playwright for full-stack E2E testing. The tests automatically start the necessary services via Docker Compose if they are not already running.
+We use Playwright for full-stack E2E testing. You can run these tests either inside a dedicated Docker container or locally.
 
+**Run via Docker (Recommended):**
+```bash
+# Run E2E tests inside a container against an ephemeral test environment
+docker compose -f compose.test.yaml --profile e2e up e2e --abort-on-container-exit --exit-code-from e2e
+```
+
+**Run Locally (requires local dev servers to be running):**
 ```bash
 # Run all E2E tests
 npm run e2e
