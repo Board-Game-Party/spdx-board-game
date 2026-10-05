@@ -7,7 +7,7 @@ export const test = base.extend<TestFixtures>({
     async ({ request }, use) => {
       // Setup: reset and seed e2e-prefixed data
       const res = await request.post('/api/test/seed');
-      expect(res.ok(), 'seed endpoint must succeed').toBeTruthy();
+      if (!res.ok()) { console.log(res.status(), await res.text()); } expect(res.ok(), 'seed endpoint must succeed').toBeTruthy();
 
       await use();
 
