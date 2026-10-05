@@ -28,12 +28,16 @@
 **ต้อง `cd k6` ก่อนรัน** — `handleSummary` เขียนผลลง `./results/` ซึ่งอ้างจาก working directory
 
 ```bash
-# 1) ให้ API ขึ้นก่อน (Docker หรือ uvicorn ตรง ๆ ก็ได้)
-DATABASE_URL="sqlite:///./k6-perf.db" python -u -m uvicorn backend.app.main:app --port 8000
+# 1) ให้ API ขึ้นก่อน (ใช้ Docker Compose สะดวกที่สุด)
+docker compose up -d api
 
 # 2) smoke ก่อนเสมอ — ถ้าแดงอย่าเสียเวลารัน load
-cd k6
-k6 run smoke.js
+# หากไม่มี k6 ติดตั้งในเครื่อง ให้รันผ่าน Docker:
+docker run --rm -i --network host -v $(pwd)/k6:/app -w /app grafana/k6 run smoke.js
+
+# หรือถ้ามี k6 ติดตั้งแล้ว:
+# cd k6
+# k6 run smoke.js
 
 # 3) load = ด่านจริง
 k6 run load.js
@@ -126,22 +130,30 @@ tier ของแต่ละ endpoint อยู่ใน `lib/thresholds.js` (`
 
 ```yaml
   performance:
-    needs: deploy-staging
+    needs: [lint-and-unit-test, e2e-tests]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop'
     steps:
       - uses: actions/checkout@v7
-      - uses: grafana/setup-k6-action@v1
-      - name: health check ก่อนยิง
-        run: curl -fsS "$BASE_URL/api/health"
-        env:
-          BASE_URL: ${{ vars.STAGING_URL }}
+
+      - name: Start Backend Services
+        run: docker compose up -d api
+        
+      - name: Wait for API to be ready
+        run: |
+          echo "Waiting for API..."
+          while ! curl -s http://localhost:8000/api/health; do
+            sleep 2
+          done
+
+      - name: Setup k6
+        uses: grafana/setup-k6-action@v1
+
       - name: k6 load
         working-directory: k6          # handleSummary เขียนลง ./results
         run: k6 run load.js
         env:
-          BASE_URL: ${{ vars.STAGING_URL }}
-          PE_ALLOW_REMOTE: 'yes'
+          BASE_URL: http://localhost:8000
+
       - uses: actions/upload-artifact@v7
         if: always()
         with:
