@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
+import os
 
 from backend.app.core.config import settings
 from backend.app.core.database import engine, Base
@@ -58,6 +59,11 @@ app.include_router(integrity_router, prefix=settings.API_V1_STR)
 app.include_router(reporting_router, prefix=settings.API_V1_STR)
 app.include_router(audit_router, prefix=settings.API_V1_STR)
 app.include_router(notification_router, prefix=settings.API_V1_STR)
+
+# E2E seed/cleanup endpoints exist only outside production (404 otherwise)
+if os.getenv("NODE_ENV") in ("development", "test"):
+    from backend.app.features.testing.router import router as testing_router
+    app.include_router(testing_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 def root():
