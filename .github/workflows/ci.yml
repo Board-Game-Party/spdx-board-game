@@ -33,15 +33,12 @@ jobs:
 
       - name: Lint
         run: npm run lint
-        continue-on-error: true
 
       - name: Typecheck
         run: npm run typecheck
-        continue-on-error: true
 
       - name: Unit Tests with Coverage
         run: npm test -- --coverage
-        continue-on-error: true
 
       - name: Upload Coverage Report
         uses: actions/upload-artifact@v7
