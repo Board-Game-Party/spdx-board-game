@@ -224,8 +224,11 @@ def reopen_assignment(db: Session, assignment: Assignment, req: ReasonedActionRe
     db.refresh(assignment)
     return get_assignment_detail(db, assignment)
 
-def list_assignments(db: Session, classroom: Classroom) -> List[AssignmentSummary]:
-    assignments = db.query(Assignment).filter(Assignment.classroom_id == classroom.id).all()
+def list_assignments(db: Session, classroom: Classroom, member: ClassroomMember) -> List[AssignmentSummary]:
+    query = db.query(Assignment).filter(Assignment.classroom_id == classroom.id)
+    if member.role == "STUDENT":
+        query = query.filter(Assignment.status != "DRAFT")
+    assignments = query.all()
     results = []
     for a in assignments:
         results.append(
