@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../app/AuthContext';
-import { Layers, Lock, Sparkles } from 'lucide-react';
+import { Layers, Lock } from 'lucide-react';
 import { Alert } from '../../components/Alert';
 import { GoogleOAuthModal } from './GoogleOAuthModal';
 
@@ -34,8 +34,8 @@ export const LoginView: React.FC = () => {
             <Layers className="h-6 w-6" />
           </div>
           <div>
-            <span className="font-bold text-lg tracking-tight text-white">PairEval</span>
-            <span className="ml-2 text-xs font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+            <span className="font-bold text-lg tracking-tight text-yellow-400 drop-shadow-[0_2px_8px_rgba(250,204,21,0.5)]">PairEval</span>
+            <span className="ml-2 text-xs font-mono px-2 py-0.5 rounded-full bg-yellow-900/40 text-yellow-300 border border-yellow-500/50">
               Campus Edition
             </span>
           </div>
@@ -45,10 +45,6 @@ export const LoginView: React.FC = () => {
       {/* Main Hero & Auth Section - Centered */}
       <main className="relative z-10 max-w-md mx-auto w-full px-6 py-8 my-auto flex flex-col items-center justify-center text-center">
         <div className="w-full text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-500/15 border border-sky-400/30 text-sky-200 text-xs font-medium mb-4 shadow-inner">
-            <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-            <span>Evidence-based Pairwise Peer Evaluation</span>
-          </div>
           <h1 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl text-center">
             ยินดีต้อนรับสู่ <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-cyan-300 to-blue-400 font-black drop-shadow-[0_2px_12px_rgba(56,189,248,0.45)]">PairEval</span>
           </h1>
