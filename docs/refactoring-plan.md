@@ -126,3 +126,41 @@ This refactoring plan prioritizes concrete code smells, bugs, security issues, a
     - **Type of code smell:** Inconsistent Timezone Handling.
     - **Why it's a problem (Impact: Low):** The rest of the backend uses timezone-aware `datetime.now(timezone.utc)`, whereas `export.py:38,217` and `engine.py:223` call naive `datetime.now()`.
     - **Suggested fix:** Replace `datetime.now()` with `datetime.now(timezone.utc)`.
+
+---
+
+## What AI Suggested vs What We'll Do
+
+| AI เสนอ | ตัดสินใจ | เหตุผล |
+|---|---|---|
+| 1. แก้ API Contract ที่ไม่ตรงกันระหว่าง `PairCoverageView.tsx:75` (`/pairs:assign-extra`) กับ `pairing/router.py:40` (`/pairs:add-evaluators`) และรองรับการระบุ `evaluator_user_id` | รับ | เป็นบั๊กที่ทำให้ฟีเจอร์เพิ่มผู้ประเมินในหน้า UI พัง (`404 Not Found`) และทำงานไม่ตรงตามที่ผู้ใช้กรอก |
+| 2. เพิ่ม `sanitize_csv_cell()` ใน `export_assignment_xlsx` (`export.py:157-189`) | รับ | ป้องกัน Formula Injection ตามข้อกำหนดความปลอดภัย `FR-SEC-04` ให้ครอบคลุมทั้ง CSV และ XLSX |
+| 3. แก้การแมปค่า `weight_pct` ผิดใน `get_group_summary_report` (`reporting/services.py:47`) | รับ | แก้บั๊กการส่งค่า `score_ratio` แทนน้ำหนักเกณฑ์จริง (`weight_pct`) ใช้การแก้เพียง 1 บรรทัด |
+| 4. คำนวณ `original_value` จริงตอนตัดสินอุทธรณ์ (`audit/services.py:148`) และนำ Group `ScoreOverride` มาคิดใน `get_individual_summary_report` (`reporting/services.py:94-148`) | รับ | ทำให้ข้อมูล Audit log ถูกต้องและผลคะแนนสุทธิตรงกันทุกหน้าจอ (Instructor Report vs Student View) |
+| 5. ล็อกฟิลด์การคำนวณคะแนนและการจับคู่ทั้งหมดเมื่อ `assignment.status != "DRAFT"` และตรวจ `score_floor <= score_ceiling` (`assignment/services.py:91-101`) | รับ | ป้องกันการแก้พารามิเตอร์สำคัญกลางคันขณะที่งานกำลังเปิดประเมินหรือตัดเกรดไปแล้ว |
+| 6. เปลี่ยน `allow_origins=["*"]` ใน `main.py:50` ให้ใช้ `settings.ALLOWED_ORIGINS` | รับ | แก้เพียง 1 บรรทัดเพื่อบังคับใช้ค่า CORS ที่ตั้งไว้ใน `config.py` และลดความเสี่ยงด้านความปลอดภัย |
+| 7. ตรวจสอบว่า `Comparison` อยู่ใน `assignment.id` ปัจจุบันก่อนสั่ง Exclude (`integrity/detector.py:205`) | รับ | ป้องกันการ Exclude ข้ามงานมอบหมายหรือข้ามห้องเรียน (IDOR) |
+| 8. ลด N+1 Queries ใน `get_evaluation_worksheet` และทำ single commit ใน `batch_save_drafts` (`evaluation/services.py:106-141, 224-234`) | รับ | ลดภาระฐานข้อมูลในจุดที่นักศึกษาใช้งานพร้อมกันจำนวนมาก (Hot path) |
+| 9. เปลี่ยน `db.query(User).all()` ให้ดึงเฉพาะ User ที่เกี่ยวข้อง (`reporting/services.py`, `detector.py`, `audit/services.py`) | รับ | ป้องกันปัญหาหน่วยความจำและช้าลงเมื่อจำนวนผู้ใช้ในระบบเพิ่มขึ้น |
+| 10. ยุบรวมโค้ดดึง `Assignment` + เช็คสิทธิ์ Classroom ที่ซ้ำกัน 21 จุดใน 7 Routers เป็นฟังก์ชัน `get_assignment_or_404` | เลื่อน | โค้ดปัจจุบันยังทำงานถูกต้อง การแก้กระทบถึง 7 ไฟล์ (เกินขอบเขตการแก้จุดเล็ก ๆ ในรอบแรก) |
+| 11. รวมการเช็คสิทธิ์แก้ไข/ลบสมาชิกและลดการ Query `ClassroomMember` ซ้ำระหว่าง `classroom/router.py` กับ `classroom/services.py` | เลื่อน | เป็นเรื่องโครงสร้างโค้ดและลด Query ซ้ำ 1 ครั้งต่อการกดแก้ไขสมาชิก ซึ่งไม่ได้เกิดถี่ |
+| 12. วัดเวลาทำข้อสอบจริง (`timeOnTaskMs`) ใน `EvaluationWorksheetView.tsx:119` แทนค่าคงที่ `3000` ms | รับ | เพื่อให้ระบบตรวจจับ `QS-05: Speed Running` (`< 3,000 ms`) ทำงานได้จริงตามที่ออกแบบไว้ใน `memory-bank/` |
+| 13. แสดงค่า `score_floor`, `score_ceiling`, `completion_threshold` จริงจาก API ใน `AssignmentDetailView.tsx:523-533` แทนค่าคงที่ | รับ | แก้บั๊กการแสดงผลหน้า UI ให้ตรงกับค่าที่ตั้งไว้ใน Assignment จริง |
+| 14. แก้ `c.display_order if c.display_order else idx` เป็น `is not None` (`assignment/services.py:81, 156`) | รับ | แก้บั๊กกรณี `display_order` มีค่าเป็น `0` แล้วถูกมองว่าเป็น `False` |
+| 15. เปลี่ยน `if req.field is not None:` 17 บล็อกใน `update_assignment` ให้ใช้ `model_dump(exclude_unset=True)` (`assignment/services.py:103-143`) | เลื่อน | อาจกระทบพฤติกรรมของ Frontend หากส่งค่า `null` มาในฟิลด์ที่ไม่ต้องการล้างค่า ต้องทดสอบคู่กับ Frontend อย่างละเอียดก่อน |
+| 16. เปลี่ยน `window.alert()` ใน `AssignmentDetailView.tsx:222` และ `AssignmentSetupView.tsx:148` เป็น `<Alert>` | ไม่รับ | อาจมี E2E test หรือ flow ที่ผูกกับ dialog พฤติกรรมเดิมอยู่ และผลกระทบต่อผู้ใช้ต่ำ |
+| 17. แยก Sub-components/Modals ออกจาก `ClassroomDetailView.tsx` (885 บรรทัด) | ไม่รับ | เป็นการ Refactor โครงสร้างไฟล์ขนาดใหญ่ (diff เกิน 200 บรรทัด ขัดกับกฎใน `AGENTS.md`) และยังไม่มีบั๊กจากการรวมไฟล์ |
+| 18. เปลี่ยน `datetime.now()` เป็น `datetime.now(timezone.utc)` ใน `export.py:38,217` และ `pairing/engine.py:223` | รับ | แก้ไขง่าย (3 บรรทัด) และทำให้การใช้เวลาเป็น UTC สม่ำเสมอทั้งระบบ |
+
+---
+
+## สิ่งที่ AI มองไม่เห็น (เราเห็นเอง)
+
+1. **นักศึกษาที่ได้รับมอบหมายให้ประเมินเพิ่ม (`source="INSTRUCTOR_EXTRA"`) ถูกคิดน้ำหนักคะแนนเท่ากับอาจารย์ (`instructor_weight`) (`backend/app/features/scoring/services.py:67` & `pairing/engine.py:369`)**:
+   - **Business Context:** เมื่อคู่ประเมินใดมีผู้ส่งผลประเมินไม่ถึงเกณฑ์ขั้นต่ำ (`min_comparisons`) อาจารย์จะแจกงานประเมินซ่อมให้นักศึกษาคนอื่นช่วยประเมินเพิ่ม (`source="INSTRUCTOR_EXTRA"`) แต่โค้ดใน `scoring/services.py:67` กำหนด `is_inst = (c.evaluator_user_id in instructor_user_ids) or (p.source in ["INSTRUCTOR_SELF", "INSTRUCTOR_EXTRA"])` ส่งผลให้คะแนนโหวตของนักศึกษาที่ได้งานซ่อมถูกคูณด้วยน้ำหนักของอาจารย์ (`instructor_weight`) แทนที่จะเป็นน้ำหนักของนักศึกษา (`1.0`)
+
+2. **การสุ่มผู้ประเมินเพิ่มในระดับรายบุคคล (`side="INDIVIDUAL"`) ไม่ได้จำกัดเฉพาะเพื่อนร่วมกลุ่มเดียวกัน (`backend/app/features/pairing/engine.py:339-345`)**:
+   - **Business Context:** ตามหลักการประเมินเพื่อแก้ปัญหา Free-rider ใน `memory-bank/intent.md` การประเมินรายบุคคล (`INDIVIDUAL`) ต้องทำโดยสมาชิกภายในกลุ่มเดียวกันที่เห็นการทำงานจริงเท่านั้น แต่ใน `add_extra_evaluators_to_pair` เช็คเพียงว่าผู้ประเมินไม่ใช่คนเดียวกับผู้ถูกประเมิน (`s.user_id in [item_a_id, item_b_id]`) โดยไม่ได้ตรวจว่าอยู่ `group_id` เดียวกันหรือไม่ ทำให้ระบบสามารถสุ่มนักศึกษาจากกลุ่มอื่นที่ไม่เคยทำงานร่วมกันมาประเมินผลงานรายบุคคลข้ามกลุ่มได้
+
+3. **นักศึกษาในห้องเรียนที่ยังไม่มีกลุ่ม (`group_id is None`) ไม่ได้รับใบงานประเมินตอน Publish แต่ถูกนำมาคิดคะแนนรายบุคคลเป็น 0 (`backend/app/features/pairing/engine.py:52-56` vs `scoring/services.py:83-87`)**:
+   - **Business Context:** ในสถานการณ์จริงของวิชาเรียน มักมีนักศึกษาใน Roster ที่ยังไม่ได้สังกัดกลุ่ม (`group_id is None`) ตอนอาจารย์กด Publish งาน ระบบใน `generate_group_pairs_for_criterion` กรองเฉพาะนักศึกษาที่มี `group_id.isnot(None)` ทำให้คนไม่มีกลุ่มไม่ได้รับคู่ประเมินเลย แต่ใน `run_scoring_engine_for_assignment` กลับดึงนักศึกษาทุกคนในห้องมาคำนวณคะแนนโดยไม่มีการแจ้งเตือนอาจารย์ก่อนกด Publish ว่ายังมีนักศึกษาตกหล่นที่ยังไม่ได้จัดเข้ากลุ่ม
