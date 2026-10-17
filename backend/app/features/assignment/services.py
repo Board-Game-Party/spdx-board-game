@@ -86,22 +86,32 @@ def create_assignment(db: Session, classroom: Classroom, req: CreateAssignmentRe
     db.refresh(assignment)
     return get_assignment_detail(db, assignment)
 
-def update_assignment(db: Session, assignment: Assignment, req: UpdateAssignmentRequest, current_user: User) -> AssignmentDetail:
-    # If not in DRAFT, check what is allowed to be modified (US-ASSIGN-03)
+_DRAFT_LOCKED_FIELDS = (
+    "group_max_score",
+    "individual_max_score",
+    "target_coverage",
+    "instructor_weight",
+    "max_workload",
+    "min_comparisons",
+    "score_floor",
+    "score_ceiling",
+    "completion_threshold",
+    "pairing_seed",
+)
+
+def _validate_assignment_update(db: Session, assignment: Assignment, req: UpdateAssignmentRequest) -> None:
     if assignment.status != "DRAFT":
         if req.criteria is not None:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Cannot modify criteria when assignment is not in DRAFT status. Please Unpublish first."
             )
-        if req.group_max_score is not None or req.individual_max_score is not None or req.target_coverage is not None:
+        if any(getattr(req, field) is not None for field in _DRAFT_LOCKED_FIELDS):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Cannot modify core scoring/pairing configuration when assignment is active."
             )
 
-    if req.name is not None:
-        assignment.name = req.name
     if req.slug is not None and req.slug != assignment.slug:
         existing = db.query(Assignment).filter(
             Assignment.classroom_id == assignment.classroom_id,
@@ -112,50 +122,50 @@ def update_assignment(db: Session, assignment: Assignment, req: UpdateAssignment
                 status_code=status.HTTP_409_CONFLICT,
                 detail=f"Assignment slug '{req.slug}' already exists in this classroom"
             )
-        assignment.slug = req.slug
-    if req.description is not None:
-        assignment.description = req.description
-    if req.artifact_url is not None:
-        assignment.artifact_url = req.artifact_url
-    if req.group_max_score is not None:
-        assignment.group_max_score = req.group_max_score
-    if req.individual_max_score is not None:
-        assignment.individual_max_score = req.individual_max_score
-    if req.group_deadline_utc is not None:
-        assignment.group_deadline_utc = req.group_deadline_utc
-    if req.individual_deadline_utc is not None:
-        assignment.individual_deadline_utc = req.individual_deadline_utc
-    if req.instructor_weight is not None:
-        assignment.instructor_weight = req.instructor_weight
-    if req.target_coverage is not None:
-        assignment.target_coverage = req.target_coverage
-    if req.max_workload is not None:
-        assignment.max_workload = req.max_workload
-    if req.min_comparisons is not None:
-        assignment.min_comparisons = req.min_comparisons
-    if req.score_floor is not None:
-        assignment.score_floor = req.score_floor
-    if req.score_ceiling is not None:
-        assignment.score_ceiling = req.score_ceiling
-    if req.completion_threshold is not None:
-        assignment.completion_threshold = req.completion_threshold
-    if req.pairing_seed is not None:
-        assignment.pairing_seed = req.pairing_seed
 
-    if req.criteria is not None and assignment.status == "DRAFT":
-        validate_criteria_weights(req.criteria, assignment.individual_max_score)
-        # Replace criteria
-        db.query(Criterion).filter(Criterion.assignment_id == assignment.id).delete()
-        for idx, c in enumerate(req.criteria):
-            crit = Criterion(
-                assignment_id=assignment.id,
-                side=c.side,
-                name=c.name,
-                description=c.description,
-                weight_pct=c.weight_pct,
-                display_order=c.display_order if c.display_order else idx
-            )
-            db.add(crit)
+    if req.criteria is not None:
+        effective_individual_max_score = (
+            req.individual_max_score
+            if req.individual_max_score is not None
+            else assignment.individual_max_score
+        )
+        validate_criteria_weights(req.criteria, effective_individual_max_score)
+
+_UPDATABLE_SCALAR_FIELDS = (
+    "name",
+    "slug",
+    "description",
+    "artifact_url",
+    "group_deadline_utc",
+    "individual_deadline_utc",
+    *_DRAFT_LOCKED_FIELDS,
+)
+
+def _apply_scalar_updates(assignment: Assignment, req: UpdateAssignmentRequest) -> None:
+    for field in _UPDATABLE_SCALAR_FIELDS:
+        value = getattr(req, field)
+        if value is not None:
+            setattr(assignment, field, value)
+
+def _replace_assignment_criteria(db: Session, assignment_id: str, criteria_inputs: List) -> None:
+    db.query(Criterion).filter(Criterion.assignment_id == assignment_id).delete()
+    for idx, criterion_input in enumerate(criteria_inputs):
+        new_criterion = Criterion(
+            assignment_id=assignment_id,
+            side=criterion_input.side,
+            name=criterion_input.name,
+            description=criterion_input.description,
+            weight_pct=criterion_input.weight_pct,
+            display_order=criterion_input.display_order if criterion_input.display_order is not None else idx
+        )
+        db.add(new_criterion)
+
+def update_assignment(db: Session, assignment: Assignment, req: UpdateAssignmentRequest, current_user: User) -> AssignmentDetail:
+    _validate_assignment_update(db, assignment, req)
+    _apply_scalar_updates(assignment, req)
+
+    if req.criteria is not None:
+        _replace_assignment_criteria(db, assignment.id, req.criteria)
 
     db.commit()
     db.refresh(assignment)

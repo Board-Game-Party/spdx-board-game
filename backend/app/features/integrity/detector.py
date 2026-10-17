@@ -202,7 +202,15 @@ def detect_quality_signals(db: Session, assignment: Assignment) -> QualityReport
 
 def exclude_comparison(db: Session, assignment: Assignment, req: ExcludeComparisonRequest, current_user: User):
     """FR-QS-02: Instructor marks comparison as EXCLUDED with reason"""
-    comp = db.query(Comparison).filter(Comparison.id == req.comparison_id).first()
+    comp = (
+        db.query(Comparison)
+        .join(PairAssignment, Comparison.pair_assignment_id == PairAssignment.id)
+        .filter(
+            Comparison.id == req.comparison_id,
+            PairAssignment.assignment_id == assignment.id,
+        )
+        .first()
+    )
     if not comp:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comparison not found")
 
