@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://spdx-board-game.onrender.com/api/:path*"
+    }
+  ]
+}
