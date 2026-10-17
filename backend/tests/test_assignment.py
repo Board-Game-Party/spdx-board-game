@@ -132,3 +132,66 @@ def test_edit_draft_assignment(client):
     res = client.patch(f"/api/assignments/{assignment_id}", headers=inst_headers, json={"slug": "draft-2"})
     assert res.status_code == 409
     assert "slug" in res.json()["detail"].lower()
+
+def test_hide_draft_assignments_from_students(client, db_session):
+    # 1. Login Instructor
+    res = client.post("/api/auth/google", json={"email": "prof4@uni.ac.th", "display_name": "Prof. Four"})
+    inst_headers = {"Authorization": f"Bearer {res.json()['access_token']}"}
+
+    # 2. Create classroom
+    res = client.post("/api/classrooms", headers=inst_headers, json={
+        "name": "Hide Draft Class",
+        "slug": "hide-draft",
+        "timezone": "Asia/Bangkok"
+    })
+    classroom_id = res.json()["id"]
+
+    # 3. Create Draft Assignment
+    res = client.post(f"/api/classrooms/{classroom_id}/assignments", headers=inst_headers, json={
+        "name": "Draft Assignment",
+        "slug": "hide-draft-1",
+        "criteria": [{"side": "GROUP", "name": "C1", "description": "", "weight_pct": 100.0, "display_order": 1}]
+    })
+    draft_id = res.json()["id"]
+
+    # 4. Create Published Assignment
+    res = client.post(f"/api/classrooms/{classroom_id}/assignments", headers=inst_headers, json={
+        "name": "Published Assignment",
+        "slug": "hide-draft-2",
+        "criteria": [{"side": "GROUP", "name": "C1", "description": "", "weight_pct": 100.0, "display_order": 1}]
+    })
+    published_id = res.json()["id"]
+
+    # Force the second assignment to PUBLISHED
+    from backend.app.shared.models import Assignment
+    a = db_session.query(Assignment).filter(Assignment.id == published_id).first()
+    a.status = "PUBLISHED"
+    db_session.commit()
+
+    # 5. Login Student
+    res = client.post("/api/auth/google", json={"email": "student2@uni.ac.th", "display_name": "Student Two"})
+    student_headers = {"Authorization": f"Bearer {res.json()['access_token']}"}
+    
+    # Enroll student via DB directly
+    from backend.app.shared.models import User, ClassroomMember
+    student = db_session.query(User).filter(User.email_raw == "student2@uni.ac.th").first()
+    db_session.add(ClassroomMember(classroom_id=classroom_id, user_id=student.id, role="STUDENT"))
+    db_session.commit()
+
+    # 6. List Assignments as Instructor (should see both)
+    res = client.get(f"/api/classrooms/{classroom_id}/assignments", headers=inst_headers)
+    assert len(res.json()) == 2
+
+    # 7. List Assignments as Student (should see only 1)
+    res = client.get(f"/api/classrooms/{classroom_id}/assignments", headers=student_headers)
+    data = res.json()
+    assert len(data) == 1
+    assert data[0]["id"] == published_id
+
+    # 8. Try to GET Draft Assignment as Student (should fail with 403 or 404)
+    res = client.get(f"/api/assignments/{draft_id}", headers=student_headers)
+    assert res.status_code in [403, 404]
+
+    # 9. Try to GET Published Assignment as Student (should succeed)
+    res = client.get(f"/api/assignments/{published_id}", headers=student_headers)
+    assert res.status_code == 200
